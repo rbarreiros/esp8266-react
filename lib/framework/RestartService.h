@@ -14,8 +14,9 @@
 
 #define RESTART_SERVICE_PATH "/rest/restart"
 
-class RestartService {
- public:
+class RestartService 
+{
+public:
   RestartService(AsyncWebServer* server, SecurityManager* securityManager);
 
   static void restartNow() {

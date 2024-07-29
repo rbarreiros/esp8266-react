@@ -1,13 +1,17 @@
 #include "ArduinoJsonJWT.h"
 
-ArduinoJsonJWT::ArduinoJsonJWT(String secret) : _secret(secret) {
-}
+ArduinoJsonJWT::ArduinoJsonJWT(String secret) 
+  : 
+  _secret{secret} 
+{}
 
-void ArduinoJsonJWT::setSecret(String secret) {
+void ArduinoJsonJWT::setSecret(String secret) 
+{
   _secret = secret;
 }
 
-String ArduinoJsonJWT::getSecret() {
+String ArduinoJsonJWT::getSecret() 
+{
   return _secret;
 }
 
@@ -18,7 +22,8 @@ String ArduinoJsonJWT::getSecret() {
  *
  * No need to pull in additional crypto libraries - lets use what we already have.
  */
-String ArduinoJsonJWT::sign(String& payload) {
+String ArduinoJsonJWT::sign(String& payload) 
+{
   unsigned char hmacResult[32];
   {
 #ifdef ESP32
@@ -39,10 +44,12 @@ String ArduinoJsonJWT::sign(String& payload) {
     br_hmac_out(&hmacCtx, hmacResult);
 #endif
   }
+
   return encode((char*)hmacResult, 32);
 }
 
-String ArduinoJsonJWT::buildJWT(JsonObject& payload) {
+String ArduinoJsonJWT::buildJWT(JsonObject& payload) 
+{
   // serialize, then encode payload
   String jwt;
   serializeJson(payload, jwt);
@@ -57,7 +64,8 @@ String ArduinoJsonJWT::buildJWT(JsonObject& payload) {
   return jwt;
 }
 
-void ArduinoJsonJWT::parseJWT(String jwt, JsonDocument& jsonDocument) {
+void ArduinoJsonJWT::parseJWT(String jwt, JsonDocument& jsonDocument) 
+{
   // clear json document before we begin, jsonDocument wil be null on failure
   jsonDocument.clear();
 
@@ -68,16 +76,15 @@ void ArduinoJsonJWT::parseJWT(String jwt, JsonDocument& jsonDocument) {
 
   // check there is a signature delimieter
   int signatureDelimiterIndex = jwt.lastIndexOf('.');
-  if (signatureDelimiterIndex == JWT_HEADER_SIZE) {
+  if (signatureDelimiterIndex == JWT_HEADER_SIZE)
     return;
-  }
 
   // check the signature is valid
   String signature = jwt.substring(signatureDelimiterIndex + 1);
   jwt = jwt.substring(0, signatureDelimiterIndex);
-  if (sign(jwt) != signature) {
+
+  if (sign(jwt) != signature)
     return;
-  }
 
   // decode payload
   jwt = jwt.substring(JWT_HEADER_SIZE + 1);
@@ -85,12 +92,12 @@ void ArduinoJsonJWT::parseJWT(String jwt, JsonDocument& jsonDocument) {
 
   // parse payload, clearing json document after failure
   DeserializationError error = deserializeJson(jsonDocument, jwt);
-  if (error != DeserializationError::Ok || !jsonDocument.is<JsonObject>()) {
+  if (error != DeserializationError::Ok || !jsonDocument.is<JsonObject>())
     jsonDocument.clear();
-  }
 }
 
-String ArduinoJsonJWT::encode(const char* cstr, int inputLen) {
+String ArduinoJsonJWT::encode(const char* cstr, int inputLen) 
+{
   // prepare encoder
   base64_encodestate _state;
 #ifdef ESP32
@@ -100,6 +107,7 @@ String ArduinoJsonJWT::encode(const char* cstr, int inputLen) {
   base64_init_encodestate_nonewlines(&_state);
   size_t encodedLength = base64_encode_expected_len_nonewlines(inputLen) + 1;
 #endif
+
   // prepare buffer of correct length, returning an empty string on failure
   char* buffer = (char*)malloc(encodedLength * sizeof(char));
   if (buffer == nullptr) {
@@ -117,9 +125,11 @@ String ArduinoJsonJWT::encode(const char* cstr, int inputLen) {
   buffer = nullptr;
 
   // remove padding and convert to URL safe form
-  while (value.length() > 0 && value.charAt(value.length() - 1) == '=') {
+  while (value.length() > 0 && value.charAt(value.length() - 1) == '=') 
+  {
     value.remove(value.length() - 1);
   }
+
   value.replace('+', '-');
   value.replace('/', '_');
 
@@ -127,7 +137,8 @@ String ArduinoJsonJWT::encode(const char* cstr, int inputLen) {
   return value;
 }
 
-String ArduinoJsonJWT::decode(String value) {
+String ArduinoJsonJWT::decode(String value) 
+{
   // convert to standard base64
   value.replace('-', '+');
   value.replace('_', '/');

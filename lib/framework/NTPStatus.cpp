@@ -1,6 +1,7 @@
 #include <NTPStatus.h>
 
-NTPStatus::NTPStatus(AsyncWebServer* server, SecurityManager* securityManager) {
+NTPStatus::NTPStatus(AsyncWebServer* server, SecurityManager* securityManager) 
+{
   server->on(NTP_STATUS_SERVICE_PATH,
              HTTP_GET,
              securityManager->wrapRequest(std::bind(&NTPStatus::ntpStatus, this, std::placeholders::_1),
@@ -12,22 +13,26 @@ NTPStatus::NTPStatus(AsyncWebServer* server, SecurityManager* securityManager) {
  *
  * Uses a 25 byte buffer, large enough to fit an ISO time string with offset.
  */
-String formatTime(tm* time, const char* format) {
+String formatTime(tm* time, const char* format) 
+{
   char time_string[25];
   strftime(time_string, 25, format, time);
   return String(time_string);
 }
 
-String toUTCTimeString(tm* time) {
+String toUTCTimeString(tm* time) 
+{
   return formatTime(time, "%FT%TZ");
 }
 
-String toLocalTimeString(tm* time) {
+String toLocalTimeString(tm* time) 
+{
   return formatTime(time, "%FT%T");
 }
 
-void NTPStatus::ntpStatus(AsyncWebServerRequest* request) {
-  AsyncJsonResponse* response = new AsyncJsonResponse(false, MAX_NTP_STATUS_SIZE);
+void NTPStatus::ntpStatus(AsyncWebServerRequest* request) 
+{
+  AsyncJsonResponse* response = new AsyncJsonResponse(false);
   JsonObject root = response->getRoot();
 
   // grab the current instant in unix seconds

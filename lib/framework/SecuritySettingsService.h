@@ -32,26 +32,32 @@
 
 #if FT_ENABLED(FT_SECURITY)
 
-class SecuritySettings {
- public:
+class SecuritySettings 
+{
+public:
   String jwtSecret;
   std::list<User> users;
 
-  static void read(SecuritySettings& settings, JsonObject& root) {
+  static void read(SecuritySettings& settings, JsonObject& root) 
+  {
     // secret
     root["jwt_secret"] = settings.jwtSecret;
 
     // users
-    JsonArray users = root.createNestedArray("users");
-    for (User user : settings.users) {
-      JsonObject userRoot = users.createNestedObject();
+    //JsonArray users = root.createNestedArray("users");
+    JsonArray users = root["users"].to<JsonArray>();
+    for (User user : settings.users) 
+    {
+      //JsonObject userRoot = users.createNestedObject();
+      JsonObject userRoot = users.add<JsonObject>();
       userRoot["username"] = user.username;
       userRoot["password"] = user.password;
       userRoot["admin"] = user.admin;
     }
   }
 
-  static StateUpdateResult update(JsonObject& root, SecuritySettings& settings) {
+  static StateUpdateResult update(JsonObject& root, SecuritySettings& settings) 
+  {
     // secret
     settings.jwtSecret = root["jwt_secret"] | SettingValue::format(FACTORY_JWT_SECRET);
 
@@ -69,8 +75,9 @@ class SecuritySettings {
   }
 };
 
-class SecuritySettingsService : public StatefulService<SecuritySettings>, public SecurityManager {
- public:
+class SecuritySettingsService : public StatefulService<SecuritySettings>, public SecurityManager 
+{
+public:
   SecuritySettingsService(AsyncWebServer* server, FS* fs);
 
   void begin();

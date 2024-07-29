@@ -30,7 +30,6 @@
 #define NTP_SETTINGS_FILE "/config/ntpSettings.json"
 #define NTP_SETTINGS_SERVICE_PATH "/rest/ntpSettings"
 
-#define MAX_TIME_SIZE 256
 #define TIME_PATH "/rest/time"
 
 class NTPSettings {
@@ -40,14 +39,16 @@ class NTPSettings {
   String tzFormat;
   String server;
 
-  static void read(NTPSettings& settings, JsonObject& root) {
+  static void read(NTPSettings& settings, JsonObject& root) 
+  {
     root["enabled"] = settings.enabled;
     root["server"] = settings.server;
     root["tz_label"] = settings.tzLabel;
     root["tz_format"] = settings.tzFormat;
   }
 
-  static StateUpdateResult update(JsonObject& root, NTPSettings& settings) {
+  static StateUpdateResult update(JsonObject& root, NTPSettings& settings) 
+  {
     settings.enabled = root["enabled"] | FACTORY_NTP_ENABLED;
     settings.server = root["server"] | FACTORY_NTP_SERVER;
     settings.tzLabel = root["tz_label"] | FACTORY_NTP_TIME_ZONE_LABEL;
@@ -56,8 +57,9 @@ class NTPSettings {
   }
 };
 
-class NTPSettingsService : public StatefulService<NTPSettings> {
- public:
+class NTPSettingsService : public StatefulService<NTPSettings> 
+{
+public:
   NTPSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
 
   void begin();

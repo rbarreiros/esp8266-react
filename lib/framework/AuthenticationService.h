@@ -9,11 +9,10 @@
 #define VERIFY_AUTHORIZATION_PATH "/rest/verifyAuthorization"
 #define SIGN_IN_PATH "/rest/signIn"
 
-#define MAX_AUTHENTICATION_SIZE 256
-
 #if FT_ENABLED(FT_SECURITY)
 
-class AuthenticationService {
+class AuthenticationService 
+{
  public:
   AuthenticationService(AsyncWebServer* server, SecurityManager* securityManager);
 

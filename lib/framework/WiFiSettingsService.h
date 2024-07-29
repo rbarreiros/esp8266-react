@@ -24,8 +24,9 @@
 
 #define WIFI_RECONNECTION_DELAY 1000 * 30
 
-class WiFiSettings {
- public:
+class WiFiSettings 
+{
+public:
   // core wifi configuration
   String ssid;
   String password;
@@ -39,7 +40,8 @@ class WiFiSettings {
   IPAddress dnsIP1;
   IPAddress dnsIP2;
 
-  static void read(WiFiSettings& settings, JsonObject& root) {
+  static void read(WiFiSettings& settings, JsonObject& root) 
+  {
     // connection settings
     root["ssid"] = settings.ssid;
     root["password"] = settings.password;
@@ -54,7 +56,8 @@ class WiFiSettings {
     JsonUtils::writeIP(root, "dns_ip_2", settings.dnsIP2);
   }
 
-  static StateUpdateResult update(JsonObject& root, WiFiSettings& settings) {
+  static StateUpdateResult update(JsonObject& root, WiFiSettings& settings) 
+  {
     settings.ssid = root["ssid"] | FACTORY_WIFI_SSID;
     settings.password = root["password"] | FACTORY_WIFI_PASSWORD;
     settings.hostname = root["hostname"] | SettingValue::format(FACTORY_WIFI_HOSTNAME);
@@ -68,7 +71,8 @@ class WiFiSettings {
     JsonUtils::readIP(root, "dns_ip_2", settings.dnsIP2);
 
     // Swap around the dns servers if 2 is populated but 1 is not
-    if (IPUtils::isNotSet(settings.dnsIP1) && IPUtils::isSet(settings.dnsIP2)) {
+    if (IPUtils::isNotSet(settings.dnsIP1) && IPUtils::isSet(settings.dnsIP2)) 
+    {
       settings.dnsIP1 = settings.dnsIP2;
       settings.dnsIP2 = INADDR_NONE;
     }
@@ -77,15 +81,17 @@ class WiFiSettings {
     // of ipAddress, gateway and subnet. This may change to static ip only
     // as sensible defaults can be assumed for gateway and subnet
     if (settings.staticIPConfig && (IPUtils::isNotSet(settings.localIP) || IPUtils::isNotSet(settings.gatewayIP) ||
-                                    IPUtils::isNotSet(settings.subnetMask))) {
+                                    IPUtils::isNotSet(settings.subnetMask))) 
+    {
       settings.staticIPConfig = false;
     }
     return StateUpdateResult::CHANGED;
   }
 };
 
-class WiFiSettingsService : public StatefulService<WiFiSettings> {
- public:
+class WiFiSettingsService : public StatefulService<WiFiSettings> 
+{
+public:
   WiFiSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
 
   void begin();

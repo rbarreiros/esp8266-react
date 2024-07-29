@@ -1,14 +1,35 @@
 #include <NTPSettingsService.h>
 
-NTPSettingsService::NTPSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) :
-    _httpEndpoint(NTPSettings::read, NTPSettings::update, this, server, NTP_SETTINGS_SERVICE_PATH, securityManager),
-    _fsPersistence(NTPSettings::read, NTPSettings::update, this, fs, NTP_SETTINGS_FILE),
-    _timeHandler(TIME_PATH,
-                 securityManager->wrapCallback(
-                     std::bind(&NTPSettingsService::configureTime, this, std::placeholders::_1, std::placeholders::_2),
-                     AuthenticationPredicates::IS_ADMIN)) {
+NTPSettingsService::NTPSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) 
+  :
+    _httpEndpoint
+    {
+      NTPSettings::read, 
+      NTPSettings::update, 
+      this, 
+      server, 
+      NTP_SETTINGS_SERVICE_PATH, 
+      securityManager
+    },
+    _fsPersistence
+    {
+      NTPSettings::read, 
+      NTPSettings::update, 
+      this, 
+      fs, 
+      NTP_SETTINGS_FILE
+    },
+    _timeHandler
+    {
+      TIME_PATH,
+      securityManager->wrapCallback(
+        std::bind(&NTPSettingsService::configureTime, this, std::placeholders::_1, std::placeholders::_2),
+        AuthenticationPredicates::IS_ADMIN
+      )
+    } 
+{
   _timeHandler.setMethod(HTTP_POST);
-  _timeHandler.setMaxContentLength(MAX_TIME_SIZE);
+  //_timeHandler.setMaxContentLength(MAX_TIME_SIZE);
   server->addHandler(&_timeHandler);
 #ifdef ESP32
   WiFi.onEvent(
@@ -18,14 +39,19 @@ NTPSettingsService::NTPSettingsService(AsyncWebServer* server, FS* fs, SecurityM
                WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
 #elif defined(ESP8266)
   _onStationModeDisconnectedHandler = WiFi.onStationModeDisconnected(
-      std::bind(&NTPSettingsService::onStationModeDisconnected, this, std::placeholders::_1));
-  _onStationModeGotIPHandler =
-      WiFi.onStationModeGotIP(std::bind(&NTPSettingsService::onStationModeGotIP, this, std::placeholders::_1));
+      std::bind(&NTPSettingsService::onStationModeDisconnected, this, std::placeholders::_1)
+  );
+
+  _onStationModeGotIPHandler = WiFi.onStationModeGotIP(
+    std::bind(&NTPSettingsService::onStationModeGotIP, this, std::placeholders::_1)
+  );
+
 #endif
   addUpdateHandler([&](const String& originId) { configureNTP(); }, false);
 }
 
-void NTPSettingsService::begin() {
+void NTPSettingsService::begin() 
+{
   _fsPersistence.readFromFS();
   configureNTP();
 }
@@ -41,18 +67,21 @@ void NTPSettingsService::onStationModeDisconnected(WiFiEvent_t event, WiFiEventI
   configureNTP();
 }
 #elif defined(ESP8266)
-void NTPSettingsService::onStationModeGotIP(const WiFiEventStationModeGotIP& event) {
+void NTPSettingsService::onStationModeGotIP(const WiFiEventStationModeGotIP& event) 
+{
   Serial.println(F("Got IP address, starting NTP Synchronization"));
   configureNTP();
 }
 
-void NTPSettingsService::onStationModeDisconnected(const WiFiEventStationModeDisconnected& event) {
+void NTPSettingsService::onStationModeDisconnected(const WiFiEventStationModeDisconnected& event) 
+{
   Serial.println(F("WiFi connection dropped, stopping NTP."));
   configureNTP();
 }
 #endif
 
-void NTPSettingsService::configureNTP() {
+void NTPSettingsService::configureNTP() 
+{
   if (WiFi.isConnected() && _state.enabled) {
     Serial.println(F("Starting NTP..."));
 #ifdef ESP32
@@ -71,7 +100,8 @@ void NTPSettingsService::configureNTP() {
   }
 }
 
-void NTPSettingsService::configureTime(AsyncWebServerRequest* request, JsonVariant& json) {
+void NTPSettingsService::configureTime(AsyncWebServerRequest* request, JsonVariant& json) 
+{
   if (!sntp_enabled() && json.is<JsonObject>()) {
     struct tm tm = {0};
     String timeLocal = json["local_time"];

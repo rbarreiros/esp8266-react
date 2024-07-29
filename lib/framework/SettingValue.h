@@ -7,8 +7,11 @@
 #include <ESP8266WiFi.h>
 #endif
 
-namespace SettingValue {
+namespace SettingValue 
+{
+
 String format(String value);
+
 };
 
 #endif  // end SettingValue

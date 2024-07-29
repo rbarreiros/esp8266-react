@@ -1,9 +1,26 @@
 #include <WiFiSettingsService.h>
 
-WiFiSettingsService::WiFiSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) :
-    _httpEndpoint(WiFiSettings::read, WiFiSettings::update, this, server, WIFI_SETTINGS_SERVICE_PATH, securityManager),
-    _fsPersistence(WiFiSettings::read, WiFiSettings::update, this, fs, WIFI_SETTINGS_FILE),
-    _lastConnectionAttempt(0) {
+WiFiSettingsService::WiFiSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) 
+  :
+    _httpEndpoint
+    {
+      WiFiSettings::read, 
+      WiFiSettings::update, 
+      this, 
+      server, 
+      WIFI_SETTINGS_SERVICE_PATH, 
+      securityManager
+    },
+    _fsPersistence
+    {
+      WiFiSettings::read, 
+      WiFiSettings::update, 
+      this, 
+      fs, 
+      WIFI_SETTINGS_FILE
+    },
+    _lastConnectionAttempt{0} 
+{
   // We want the device to come up in opmode=0 (WIFI_OFF), when erasing the flash this is not the default.
   // If needed, we save opmode=0 before disabling persistence so the device boots with WiFi disabled in the future.
   if (WiFi.getMode() != WIFI_OFF) {
@@ -30,12 +47,14 @@ WiFiSettingsService::WiFiSettingsService(AsyncWebServer* server, FS* fs, Securit
   addUpdateHandler([&](const String& originId) { reconfigureWiFiConnection(); }, false);
 }
 
-void WiFiSettingsService::begin() {
+void WiFiSettingsService::begin() 
+{
   _fsPersistence.readFromFS();
   reconfigureWiFiConnection();
 }
 
-void WiFiSettingsService::reconfigureWiFiConnection() {
+void WiFiSettingsService::reconfigureWiFiConnection() 
+{
   // reset last connection attempt to force loop to reconnect immediately
   _lastConnectionAttempt = 0;
 
@@ -49,21 +68,26 @@ void WiFiSettingsService::reconfigureWiFiConnection() {
 #endif
 }
 
-void WiFiSettingsService::loop() {
+void WiFiSettingsService::loop() 
+{
   unsigned long currentMillis = millis();
-  if (!_lastConnectionAttempt || (unsigned long)(currentMillis - _lastConnectionAttempt) >= WIFI_RECONNECTION_DELAY) {
+  if (!_lastConnectionAttempt || (unsigned long)(currentMillis - _lastConnectionAttempt) >= WIFI_RECONNECTION_DELAY) 
+  {
     _lastConnectionAttempt = currentMillis;
     manageSTA();
   }
 }
 
-void WiFiSettingsService::manageSTA() {
+void WiFiSettingsService::manageSTA() 
+{
   // Abort if already connected, or if we have no SSID
   if (WiFi.isConnected() || _state.ssid.length() == 0) {
     return;
   }
+
   // Connect or reconnect as required
-  if ((WiFi.getMode() & WIFI_STA) == 0) {
+  if ((WiFi.getMode() & WIFI_STA) == 0) 
+  {
     Serial.println(F("Connecting to WiFi."));
     if (_state.staticIPConfig) {
       // configure for static IP
@@ -94,7 +118,8 @@ void WiFiSettingsService::onStationModeStop(WiFiEvent_t event, WiFiEventInfo_t i
   }
 }
 #elif defined(ESP8266)
-void WiFiSettingsService::onStationModeDisconnected(const WiFiEventStationModeDisconnected& event) {
+void WiFiSettingsService::onStationModeDisconnected(const WiFiEventStationModeDisconnected& event) 
+{
   WiFi.disconnect(true);
 }
 #endif

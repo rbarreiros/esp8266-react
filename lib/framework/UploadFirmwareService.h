@@ -18,7 +18,8 @@
 
 #define UPLOAD_FIRMWARE_PATH "/rest/uploadFirmware"
 
-class UploadFirmwareService {
+class UploadFirmwareService 
+{
  public:
   UploadFirmwareService(AsyncWebServer* server, SecurityManager* securityManager);
 

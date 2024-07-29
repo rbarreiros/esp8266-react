@@ -1,15 +1,18 @@
 #include <SystemStatus.h>
 
-SystemStatus::SystemStatus(AsyncWebServer* server, SecurityManager* securityManager) {
+SystemStatus::SystemStatus(AsyncWebServer* server, SecurityManager* securityManager) 
+{
   server->on(SYSTEM_STATUS_SERVICE_PATH,
              HTTP_GET,
              securityManager->wrapRequest(std::bind(&SystemStatus::systemStatus, this, std::placeholders::_1),
                                           AuthenticationPredicates::IS_AUTHENTICATED));
 }
 
-void SystemStatus::systemStatus(AsyncWebServerRequest* request) {
-  AsyncJsonResponse* response = new AsyncJsonResponse(false, MAX_ESP_STATUS_SIZE);
+void SystemStatus::systemStatus(AsyncWebServerRequest* request) 
+{
+  AsyncJsonResponse* response = new AsyncJsonResponse(false);
   JsonObject root = response->getRoot();
+
 #ifdef ESP32
   root["esp_platform"] = "esp32";
   root["max_alloc_heap"] = ESP.getMaxAllocHeap();

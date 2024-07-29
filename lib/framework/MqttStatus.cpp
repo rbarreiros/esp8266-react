@@ -2,16 +2,19 @@
 
 MqttStatus::MqttStatus(AsyncWebServer* server,
                        MqttSettingsService* mqttSettingsService,
-                       SecurityManager* securityManager) :
-    _mqttSettingsService(mqttSettingsService) {
+                       SecurityManager* securityManager) 
+  :
+    _mqttSettingsService{mqttSettingsService} 
+{
   server->on(MQTT_STATUS_SERVICE_PATH,
              HTTP_GET,
              securityManager->wrapRequest(std::bind(&MqttStatus::mqttStatus, this, std::placeholders::_1),
                                           AuthenticationPredicates::IS_AUTHENTICATED));
 }
 
-void MqttStatus::mqttStatus(AsyncWebServerRequest* request) {
-  AsyncJsonResponse* response = new AsyncJsonResponse(false, MAX_MQTT_STATUS_SIZE);
+void MqttStatus::mqttStatus(AsyncWebServerRequest* request) 
+{
+  AsyncJsonResponse* response = new AsyncJsonResponse(false);
   JsonObject root = response->getRoot();
 
   root["enabled"] = _mqttSettingsService->isEnabled();

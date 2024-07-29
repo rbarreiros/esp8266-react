@@ -2,82 +2,120 @@
 
 #if FT_ENABLED(FT_SECURITY)
 
-SecuritySettingsService::SecuritySettingsService(AsyncWebServer* server, FS* fs) :
-    _httpEndpoint(SecuritySettings::read, SecuritySettings::update, this, server, SECURITY_SETTINGS_PATH, this),
-    _fsPersistence(SecuritySettings::read, SecuritySettings::update, this, fs, SECURITY_SETTINGS_FILE),
-    _jwtHandler(FACTORY_JWT_SECRET) {
+SecuritySettingsService::SecuritySettingsService(AsyncWebServer* server, FS* fs) 
+  :
+    _httpEndpoint
+    {
+      SecuritySettings::read, 
+      SecuritySettings::update, 
+      this, 
+      server, 
+      SECURITY_SETTINGS_PATH, 
+      this
+    },
+    _fsPersistence
+    {
+      SecuritySettings::read, 
+      SecuritySettings::update, 
+      this, 
+      fs, 
+      SECURITY_SETTINGS_FILE
+    },
+    _jwtHandler{FACTORY_JWT_SECRET} 
+{
   addUpdateHandler([&](const String& originId) { configureJWTHandler(); }, false);
 }
 
-void SecuritySettingsService::begin() {
+void SecuritySettingsService::begin() 
+{
   _fsPersistence.readFromFS();
   configureJWTHandler();
 }
 
-Authentication SecuritySettingsService::authenticateRequest(AsyncWebServerRequest* request) {
-  AsyncWebHeader* authorizationHeader = request->getHeader(AUTHORIZATION_HEADER);
-  if (authorizationHeader) {
+Authentication SecuritySettingsService::authenticateRequest(AsyncWebServerRequest* request) 
+{
+  const AsyncWebHeader* authorizationHeader = request->getHeader(AUTHORIZATION_HEADER);
+  
+  if (authorizationHeader) 
+  {
     String value = authorizationHeader->value();
     if (value.startsWith(AUTHORIZATION_HEADER_PREFIX)) {
       value = value.substring(AUTHORIZATION_HEADER_PREFIX_LEN);
       return authenticateJWT(value);
     }
-  } else if (request->hasParam(ACCESS_TOKEN_PARAMATER)) {
-    AsyncWebParameter* tokenParamater = request->getParam(ACCESS_TOKEN_PARAMATER);
+  } 
+  else if (request->hasParam(ACCESS_TOKEN_PARAMATER)) 
+  {
+    const AsyncWebParameter* tokenParamater = request->getParam(ACCESS_TOKEN_PARAMATER);
     String value = tokenParamater->value();
     return authenticateJWT(value);
   }
+
   return Authentication();
 }
 
-void SecuritySettingsService::configureJWTHandler() {
+void SecuritySettingsService::configureJWTHandler() 
+{
   _jwtHandler.setSecret(_state.jwtSecret);
 }
 
-Authentication SecuritySettingsService::authenticateJWT(String& jwt) {
-  DynamicJsonDocument payloadDocument(MAX_JWT_SIZE);
+Authentication SecuritySettingsService::authenticateJWT(String& jwt) 
+{
+  JsonDocument payloadDocument;
   _jwtHandler.parseJWT(jwt, payloadDocument);
-  if (payloadDocument.is<JsonObject>()) {
+
+  if (payloadDocument.is<JsonObject>()) 
+  {
     JsonObject parsedPayload = payloadDocument.as<JsonObject>();
     String username = parsedPayload["username"];
-    for (User _user : _state.users) {
+    for (User _user : _state.users) 
+    {
       if (_user.username == username && validatePayload(parsedPayload, &_user)) {
         return Authentication(_user);
       }
     }
   }
+
   return Authentication();
 }
 
-Authentication SecuritySettingsService::authenticate(const String& username, const String& password) {
-  for (User _user : _state.users) {
-    if (_user.username == username && _user.password == password) {
+Authentication SecuritySettingsService::authenticate(const String& username, const String& password) 
+{
+  for (User _user : _state.users) 
+  {
+    if (_user.username == username && _user.password == password) 
+    {
       return Authentication(_user);
     }
   }
+
   return Authentication();
 }
 
-inline void populateJWTPayload(JsonObject& payload, User* user) {
+inline void populateJWTPayload(JsonObject& payload, User* user) 
+{
   payload["username"] = user->username;
   payload["admin"] = user->admin;
 }
 
-boolean SecuritySettingsService::validatePayload(JsonObject& parsedPayload, User* user) {
-  DynamicJsonDocument jsonDocument(MAX_JWT_SIZE);
-  JsonObject payload = jsonDocument.to<JsonObject>();
+boolean SecuritySettingsService::validatePayload(JsonObject& parsedPayload, User* user) 
+{
+  JsonDocument json;
+  JsonObject payload = json.to<JsonObject>();
   populateJWTPayload(payload, user);
   return payload == parsedPayload;
 }
 
-String SecuritySettingsService::generateJWT(User* user) {
-  DynamicJsonDocument jsonDocument(MAX_JWT_SIZE);
-  JsonObject payload = jsonDocument.to<JsonObject>();
+String SecuritySettingsService::generateJWT(User* user) 
+{
+  JsonDocument json;
+  JsonObject payload = json.to<JsonObject>();
   populateJWTPayload(payload, user);
   return _jwtHandler.buildJWT(payload);
 }
 
-ArRequestFilterFunction SecuritySettingsService::filterRequest(AuthenticationPredicate predicate) {
+ArRequestFilterFunction SecuritySettingsService::filterRequest(AuthenticationPredicate predicate) 
+{
   return [this, predicate](AsyncWebServerRequest* request) {
     Authentication authentication = authenticateRequest(request);
     return predicate(authentication);
@@ -85,7 +123,8 @@ ArRequestFilterFunction SecuritySettingsService::filterRequest(AuthenticationPre
 }
 
 ArRequestHandlerFunction SecuritySettingsService::wrapRequest(ArRequestHandlerFunction onRequest,
-                                                              AuthenticationPredicate predicate) {
+                                                              AuthenticationPredicate predicate) 
+{
   return [this, onRequest, predicate](AsyncWebServerRequest* request) {
     Authentication authentication = authenticateRequest(request);
     if (!predicate(authentication)) {
@@ -97,7 +136,8 @@ ArRequestHandlerFunction SecuritySettingsService::wrapRequest(ArRequestHandlerFu
 }
 
 ArJsonRequestHandlerFunction SecuritySettingsService::wrapCallback(ArJsonRequestHandlerFunction onRequest,
-                                                                   AuthenticationPredicate predicate) {
+                                                                   AuthenticationPredicate predicate) 
+{
   return [this, onRequest, predicate](AsyncWebServerRequest* request, JsonVariant& json) {
     Authentication authentication = authenticateRequest(request);
     if (!predicate(authentication)) {

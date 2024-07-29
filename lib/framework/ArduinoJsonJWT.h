@@ -12,7 +12,8 @@
 #include <bearssl/bearssl_hmac.h>
 #endif
 
-class ArduinoJsonJWT {
+class ArduinoJsonJWT 
+{
  private:
   String _secret;
 

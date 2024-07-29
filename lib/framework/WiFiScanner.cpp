@@ -1,6 +1,7 @@
 #include <WiFiScanner.h>
 
-WiFiScanner::WiFiScanner(AsyncWebServer* server, SecurityManager* securityManager) {
+WiFiScanner::WiFiScanner(AsyncWebServer* server, SecurityManager* securityManager) 
+{
   server->on(SCAN_NETWORKS_SERVICE_PATH,
              HTTP_GET,
              securityManager->wrapRequest(std::bind(&WiFiScanner::scanNetworks, this, std::placeholders::_1),
@@ -11,22 +12,28 @@ WiFiScanner::WiFiScanner(AsyncWebServer* server, SecurityManager* securityManage
                                           AuthenticationPredicates::IS_ADMIN));
 };
 
-void WiFiScanner::scanNetworks(AsyncWebServerRequest* request) {
+void WiFiScanner::scanNetworks(AsyncWebServerRequest* request) 
+{
   if (WiFi.scanComplete() != -1) {
     WiFi.scanDelete();
     WiFi.scanNetworks(true);
   }
+
   request->send(202);
 }
 
-void WiFiScanner::listNetworks(AsyncWebServerRequest* request) {
+void WiFiScanner::listNetworks(AsyncWebServerRequest* request) 
+{
   int numNetworks = WiFi.scanComplete();
-  if (numNetworks > -1) {
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, MAX_WIFI_SCANNER_SIZE);
+  
+  if (numNetworks > -1) 
+  {
+    AsyncJsonResponse* response = new AsyncJsonResponse(false);
     JsonObject root = response->getRoot();
-    JsonArray networks = root.createNestedArray("networks");
-    for (int i = 0; i < numNetworks; i++) {
-      JsonObject network = networks.createNestedObject();
+    JsonArray networks = root["networks"].to<JsonArray>();
+    for (int i = 0; i < numNetworks; i++) 
+    {
+      JsonObject network = networks.add<JsonObject>();
       network["rssi"] = WiFi.RSSI(i);
       network["ssid"] = WiFi.SSID(i);
       network["bssid"] = WiFi.BSSIDstr(i);
@@ -37,6 +44,7 @@ void WiFiScanner::listNetworks(AsyncWebServerRequest* request) {
       network["encryption_type"] = convertEncryptionType(WiFi.encryptionType(i));
 #endif
     }
+
     response->setLength();
     request->send(response);
   } else if (numNetworks == -1) {
@@ -52,7 +60,8 @@ void WiFiScanner::listNetworks(AsyncWebServerRequest* request) {
  *
  * This allows us to use a single set of mappings in the UI.
  */
-uint8_t WiFiScanner::convertEncryptionType(uint8_t encryptionType) {
+uint8_t WiFiScanner::convertEncryptionType(uint8_t encryptionType) 
+{
   switch (encryptionType) {
     case ENC_TYPE_NONE:
       return AUTH_OPEN;
@@ -64,7 +73,8 @@ uint8_t WiFiScanner::convertEncryptionType(uint8_t encryptionType) {
       return AUTH_WPA2_PSK;
     case ENC_TYPE_AUTO:
       return AUTH_WPA_WPA2_PSK;
-  }
+  };
+  
   return -1;
 }
 #endif

@@ -38,7 +38,8 @@
 #define CORS_ORIGIN "*"
 #endif
 
-class ESP8266React {
+class ESP8266React 
+{
  public:
   ESP8266React(AsyncWebServer* server);
 
@@ -84,7 +85,7 @@ class ESP8266React {
     return &_mqttSettingsService;
   }
 
-  AsyncMqttClient* getMqttClient() {
+  espMqttClientAsync* getMqttClient() {
     return _mqttSettingsService.getMqttClient();
   }
 #endif

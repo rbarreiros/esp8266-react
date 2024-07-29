@@ -1,7 +1,9 @@
 #include <UploadFirmwareService.h>
 
-UploadFirmwareService::UploadFirmwareService(AsyncWebServer* server, SecurityManager* securityManager) :
-    _securityManager(securityManager) {
+UploadFirmwareService::UploadFirmwareService(AsyncWebServer* server, SecurityManager* securityManager) 
+  :
+    _securityManager{securityManager} 
+{
   server->on(UPLOAD_FIRMWARE_PATH,
              HTTP_POST,
              std::bind(&UploadFirmwareService::uploadComplete, this, std::placeholders::_1),
@@ -23,8 +25,10 @@ void UploadFirmwareService::handleUpload(AsyncWebServerRequest* request,
                                          size_t index,
                                          uint8_t* data,
                                          size_t len,
-                                         bool final) {
-  if (!index) {
+                                         bool final) 
+{
+  if (!index) 
+  {
     Authentication authentication = _securityManager->authenticateRequest(request);
     if (AuthenticationPredicates::IS_ADMIN(authentication)) {
       if (Update.begin(request->contentLength())) {
@@ -42,7 +46,8 @@ void UploadFirmwareService::handleUpload(AsyncWebServerRequest* request,
   }
 
   // if we haven't delt with an error, continue with the update
-  if (!request->_tempObject) {
+  if (!request->_tempObject) 
+  {
     if (Update.write(data, len) != len) {
       Update.printError(Serial);
       handleError(request, 500);
@@ -56,16 +61,19 @@ void UploadFirmwareService::handleUpload(AsyncWebServerRequest* request,
   }
 }
 
-void UploadFirmwareService::uploadComplete(AsyncWebServerRequest* request) {
+void UploadFirmwareService::uploadComplete(AsyncWebServerRequest* request) 
+{
   // if no error, send the success response
-  if (!request->_tempObject) {
+  if (!request->_tempObject) 
+  {
     request->onDisconnect(RestartService::restartNow);
     AsyncWebServerResponse* response = request->beginResponse(200);
     request->send(response);
   }
 }
 
-void UploadFirmwareService::handleError(AsyncWebServerRequest* request, int code) {
+void UploadFirmwareService::handleError(AsyncWebServerRequest* request, int code) 
+{
   // if we have had an error already, do nothing
   if (request->_tempObject) {
     return;
@@ -76,7 +84,8 @@ void UploadFirmwareService::handleError(AsyncWebServerRequest* request, int code
   request->send(response);
 }
 
-void UploadFirmwareService::handleEarlyDisconnect() {
+void UploadFirmwareService::handleEarlyDisconnect() 
+{
 #ifdef ESP32
   Update.abort();
 #elif defined(ESP8266)

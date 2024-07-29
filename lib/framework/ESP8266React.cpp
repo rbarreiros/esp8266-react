@@ -1,46 +1,59 @@
 #include <ESP8266React.h>
 
 ESP8266React::ESP8266React(AsyncWebServer* server) :
-    _featureService(server),
-    _securitySettingsService(server, &ESPFS),
-    _wifiSettingsService(server, &ESPFS, &_securitySettingsService),
-    _wifiScanner(server, &_securitySettingsService),
-    _wifiStatus(server, &_securitySettingsService),
-    _apSettingsService(server, &ESPFS, &_securitySettingsService),
-    _apStatus(server, &_securitySettingsService, &_apSettingsService),
+    _featureService{server},
+    _securitySettingsService{server, &ESPFS},
+    _wifiSettingsService
+    {
+      server, &ESPFS, &_securitySettingsService
+    },
+    _wifiScanner{server, &_securitySettingsService},
+    _wifiStatus{server, &_securitySettingsService},
+    _apSettingsService
+    {
+      server, &ESPFS, &_securitySettingsService
+    },
+    _apStatus
+    {
+      server, &_securitySettingsService, &_apSettingsService
+    },
 #if FT_ENABLED(FT_NTP)
-    _ntpSettingsService(server, &ESPFS, &_securitySettingsService),
-    _ntpStatus(server, &_securitySettingsService),
+    _ntpSettingsService{server, &ESPFS, &_securitySettingsService},
+    _ntpStatus{server, &_securitySettingsService},
 #endif
 #if FT_ENABLED(FT_OTA)
-    _otaSettingsService(server, &ESPFS, &_securitySettingsService),
+    _otaSettingsService{server, &ESPFS, &_securitySettingsService},
 #endif
 #if FT_ENABLED(FT_UPLOAD_FIRMWARE)
-    _uploadFirmwareService(server, &_securitySettingsService),
+    _uploadFirmwareService{server, &_securitySettingsService},
 #endif
 #if FT_ENABLED(FT_MQTT)
-    _mqttSettingsService(server, &ESPFS, &_securitySettingsService),
-    _mqttStatus(server, &_mqttSettingsService, &_securitySettingsService),
+    _mqttSettingsService{server, &ESPFS, &_securitySettingsService},
+    _mqttStatus{server, &_mqttSettingsService, &_securitySettingsService},
 #endif
 #if FT_ENABLED(FT_SECURITY)
-    _authenticationService(server, &_securitySettingsService),
+    _authenticationService{server, &_securitySettingsService},
 #endif
-    _restartService(server, &_securitySettingsService),
-    _factoryResetService(server, &ESPFS, &_securitySettingsService),
-    _systemStatus(server, &_securitySettingsService) {
+    _restartService{server, &_securitySettingsService},
+    _factoryResetService{server, &ESPFS, &_securitySettingsService},
+    _systemStatus{server, &_securitySettingsService} 
+{
 #ifdef PROGMEM_WWW
   // Serve static resources from PROGMEM
   WWWData::registerRoutes(
-      [server, this](const String& uri, const String& contentType, const uint8_t* content, size_t len) {
-        ArRequestHandlerFunction requestHandler = [contentType, content, len](AsyncWebServerRequest* request) {
-          AsyncWebServerResponse* response = request->beginResponse_P(200, contentType, content, len);
+      [server, this](const String& uri, const String& contentType, const uint8_t* content) {
+        ArRequestHandlerFunction requestHandler = [contentType, content](AsyncWebServerRequest* request) 
+        {
+          AsyncWebServerResponse* response = request->beginResponse(200, contentType, reinterpret_cast<const char*>(content));
           response->addHeader("Content-Encoding", "gzip");
           request->send(response);
         };
+
         server->on(uri.c_str(), HTTP_GET, requestHandler);
         // Serving non matching get requests with "/index.html"
         // OPTIONS get a straight up 200 response
-        if (uri.equals("/index.html")) {
+        if (uri.equals("/index.html")) 
+        {
           server->onNotFound([requestHandler](AsyncWebServerRequest* request) {
             if (request->method() == HTTP_GET) {
               requestHandler(request);

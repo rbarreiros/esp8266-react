@@ -5,14 +5,20 @@
 
 const IPAddress IP_NOT_SET = IPAddress(INADDR_NONE);
 
-class IPUtils {
+class IPUtils 
+{
  public:
-   static bool isSet(const IPAddress& ip) {
+
+  static bool isSet(const IPAddress& ip) 
+  {
     return ip != IP_NOT_SET;
   }
-  static bool isNotSet(const IPAddress& ip) {
+  
+  static bool isNotSet(const IPAddress& ip) 
+  {
     return ip == IP_NOT_SET;
   }
+  
 };
 
 #endif  // end IPUtils_h

@@ -57,7 +57,8 @@
 
 enum APNetworkStatus { ACTIVE = 0, INACTIVE, LINGERING };
 
-class APSettings {
+class APSettings 
+{
  public:
   uint8_t provisionMode;
   String ssid;
@@ -70,13 +71,15 @@ class APSettings {
   IPAddress gatewayIP;
   IPAddress subnetMask;
 
-  bool operator==(const APSettings& settings) const {
+  bool operator==(const APSettings& settings) const 
+  {
     return provisionMode == settings.provisionMode && ssid == settings.ssid && password == settings.password &&
            channel == settings.channel && ssidHidden == settings.ssidHidden && maxClients == settings.maxClients &&
            localIP == settings.localIP && gatewayIP == settings.gatewayIP && subnetMask == settings.subnetMask;
   }
 
-  static void read(APSettings& settings, JsonObject& root) {
+  static void read(APSettings& settings, JsonObject& root) 
+  {
     root["provision_mode"] = settings.provisionMode;
     root["ssid"] = settings.ssid;
     root["password"] = settings.password;
@@ -88,17 +91,21 @@ class APSettings {
     root["subnet_mask"] = settings.subnetMask.toString();
   }
 
-  static StateUpdateResult update(JsonObject& root, APSettings& settings) {
+  static StateUpdateResult update(JsonObject& root, APSettings& settings) 
+  {
     APSettings newSettings = {};
     newSettings.provisionMode = root["provision_mode"] | FACTORY_AP_PROVISION_MODE;
-    switch (settings.provisionMode) {
+    
+    switch (settings.provisionMode) 
+    {
       case AP_MODE_ALWAYS:
       case AP_MODE_DISCONNECTED:
       case AP_MODE_NEVER:
         break;
       default:
         newSettings.provisionMode = AP_MODE_ALWAYS;
-    }
+    };
+
     newSettings.ssid = root["ssid"] | SettingValue::format(FACTORY_AP_SSID);
     newSettings.password = root["password"] | FACTORY_AP_PASSWORD;
     newSettings.channel = root["channel"] | FACTORY_AP_CHANNEL;
@@ -109,15 +116,16 @@ class APSettings {
     JsonUtils::readIP(root, "gateway_ip", newSettings.gatewayIP, FACTORY_AP_GATEWAY_IP);
     JsonUtils::readIP(root, "subnet_mask", newSettings.subnetMask, FACTORY_AP_SUBNET_MASK);
 
-    if (newSettings == settings) {
+    if (newSettings == settings)
       return StateUpdateResult::UNCHANGED;
-    }
+
     settings = newSettings;
     return StateUpdateResult::CHANGED;
   }
 };
 
-class APSettingsService : public StatefulService<APSettings> {
+class APSettingsService : public StatefulService<APSettings> 
+{
  public:
   APSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager);
 
