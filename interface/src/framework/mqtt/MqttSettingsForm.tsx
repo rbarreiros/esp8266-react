@@ -114,17 +114,6 @@ const MqttSettingsForm: FC = () => {
           }
           label="Clean Session?"
         />
-        <ValidatedTextField
-          fieldErrors={fieldErrors}
-          name="max_topic_length"
-          label="Max Topic Length"
-          fullWidth
-          variant="outlined"
-          value={numberValue(data.max_topic_length)}
-          type="number"
-          onChange={updateFormValue}
-          margin="normal"
-        />
         <ButtonRow mt={1}>
           <Button startIcon={<SaveIcon />} disabled={saving} variant="contained" color="primary" type="submit" onClick={validateAndSubmit}>
             Save

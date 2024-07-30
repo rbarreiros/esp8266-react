@@ -14,9 +14,5 @@ export const MQTT_SETTINGS_VALIDATOR = new Schema({
   keep_alive: [
     { required: true, message: "Keep alive is required" },
     { type: "number", min: 1, max: 86400, message: "Keep alive must be between 1 and 86400" }
-  ],
-  max_topic_length: [
-    { required: true, message: "Max topic length is required" },
-    { type: "number", min: 16, max: 1024, message: "Max topic length must be between 16 and 1024" }
   ]
 });

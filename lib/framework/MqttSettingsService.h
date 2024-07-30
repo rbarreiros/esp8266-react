@@ -39,10 +39,6 @@
 #define FACTORY_MQTT_CLEAN_SESSION true
 #endif
 
-#ifndef FACTORY_MQTT_MAX_TOPIC_LENGTH
-#define FACTORY_MQTT_MAX_TOPIC_LENGTH 128
-#endif
-
 #define MQTT_SETTINGS_FILE "/config/mqttSettings.json"
 #define MQTT_SETTINGS_SERVICE_PATH "/rest/mqttSettings"
 
