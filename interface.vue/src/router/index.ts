@@ -8,6 +8,7 @@ import NetworkTime from '@/framework/ntp/NetworkTime.vue'
 import Mqtt from '@/framework/mqtt/Mqtt.vue'
 import Security from '@/framework/security/Security.vue'
 import System from '@/framework/system/System.vue'
+import SignIn from '@/SignIn.vue'
 
 // Project route
 import projectroutes from '@/project/ProjectRoute'
@@ -20,8 +21,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: Home
+      name: 'login',
+      component: SignIn
     },
     {
       path: ProjectPath,
@@ -74,5 +75,28 @@ const router = createRouter({
     */
   ]
 })
+
+router.beforeEach((to, from, next) => {
+  if(to.meta.requiredAuth)
+  {
+    const token = localStorage.getItem('token');
+    if(token)
+    {
+      // user authenticated, proceed
+      next();
+    }
+    else 
+    {
+      // not authenticated, redirect to login
+      next('/login');
+    }
+  }
+  else 
+  {
+    // non protected route
+    next();
+  }
+});
+
 
 export default router
