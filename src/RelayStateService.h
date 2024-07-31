@@ -8,12 +8,12 @@
 
 #define RELAY_SETTINGS_ENDPOINT_PATH "/rest/relayState"
 
-#define RELAY_PIN 0
+#define RELAY_PIN 5
 #define DEFAULT_RELAY_STATE false
 #define OFF_STATE "OFF"
 #define ON_STATE  "ON"
-#define RELAY_ON  LOW
-#define RELAY_OFF HIGH
+#define RELAY_ON  HIGH
+#define RELAY_OFF LOW
 
 #define RELAY_AUTO_OFF true
 #define RELAY_AUTO_OFF_TIME_MS  1000

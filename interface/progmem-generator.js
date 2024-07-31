@@ -90,12 +90,12 @@ class ProgmemGenerator {
 
           const generateWWWClass = () => {
             // eslint-disable-next-line max-len
-            return `typedef std::function<void(const String& uri, const String& contentType, const uint8_t * content)> RouteRegistrationHandler;
+            return `typedef std::function<void(const String& uri, const String& contentType, const uint8_t * content, size_t size)> RouteRegistrationHandler;
 
 class WWWData {
 ${indent}public:
 ${indent.repeat(2)}static void registerRoutes(RouteRegistrationHandler handler) {
-${fileInfo.map((file) => `${indent.repeat(3)}handler("${file.uri}", "${file.mimeType}", ${file.variable});`).join('\n')}
+${fileInfo.map((file) => `${indent.repeat(3)}handler("${file.uri}", "${file.mimeType}", ${file.variable}, ${file.size});`).join('\n')}
 ${indent.repeat(2)}}
 };
 `;

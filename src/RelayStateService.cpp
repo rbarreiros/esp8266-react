@@ -72,6 +72,7 @@ RelayStateService::RelayStateService(AsyncWebServer* server,
 {
     // Configure relay Pin
     pinMode(RELAY_PIN, OUTPUT);
+    digitalWrite(RELAY_PIN, RELAY_OFF);
 
     // Configure MQTT Callback
     m_mqttClient->onConnect(std::bind(&RelayStateService::registerConfig, this));

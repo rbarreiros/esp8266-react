@@ -41,14 +41,13 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
 #ifdef PROGMEM_WWW
   // Serve static resources from PROGMEM
   WWWData::registerRoutes(
-      [server, this](const String& uri, const String& contentType, const uint8_t* content) {
-        ArRequestHandlerFunction requestHandler = [contentType, content](AsyncWebServerRequest* request) 
+      [server, this](const String& uri, const String& contentType, const uint8_t* content, size_t size) {
+        ArRequestHandlerFunction requestHandler = [contentType, content, size](AsyncWebServerRequest* request) 
         {
-          AsyncWebServerResponse* response = request->beginResponse(200, contentType, reinterpret_cast<const char*>(content));
+          AsyncWebServerResponse* response = request->beginResponse(200, contentType, content, size);
           response->addHeader("Content-Encoding", "gzip");
           request->send(response);
         };
-
         server->on(uri.c_str(), HTTP_GET, requestHandler);
         // Serving non matching get requests with "/index.html"
         // OPTIONS get a straight up 200 response
