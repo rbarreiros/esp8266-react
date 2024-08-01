@@ -47,7 +47,6 @@ void APSettingsService::loop()
     _lastManaged = currentMillis;
     manageAP();
   }
-
   handleDNS();
 }
 

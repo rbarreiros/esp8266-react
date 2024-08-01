@@ -10,3 +10,11 @@ export const OTA_SETTINGS_VALIDATOR = new Schema({
     { type: "string", min: 1, max: 64, message: "Password must be between 1 and 64 characters" }
   ]
 });
+
+export const SYSTEM_SETTINGS_VALIDATOR = new Schema({
+  reset_pin: [
+    { required: true, message: "Reset pin is required" },
+    { type: "number", min: 1, max: 50, message: "Pin must be between 1 and 50" }
+  ],
+
+});

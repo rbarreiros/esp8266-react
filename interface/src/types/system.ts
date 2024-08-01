@@ -35,3 +35,12 @@ export interface OTASettings {
   port: number;
   password: string;
 }
+
+export interface SystemSettings {
+  reset_enabled: boolean;
+  reset_pin: number;
+  reset_pullup: boolean;
+  wifi_led_enabled: boolean;
+  wifi_led_pin: number;
+  wifi_led_sink: boolean;
+}

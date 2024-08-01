@@ -25,6 +25,7 @@
 #include <RestartService.h>
 #include <SecuritySettingsService.h>
 #include <SystemStatus.h>
+#include <SystemSettingsService.h>
 #include <WiFiScanner.h>
 #include <WiFiSettingsService.h>
 #include <WiFiStatus.h>
@@ -122,6 +123,7 @@ class ESP8266React
   RestartService _restartService;
   FactoryResetService _factoryResetService;
   SystemStatus _systemStatus;
+  SystemSettingsService _systemSettings;
 };
 
 #endif

@@ -1,6 +1,6 @@
 import { AxiosPromise } from 'axios';
 
-import { OTASettings, SystemStatus } from '../types';
+import { OTASettings, SystemStatus, SystemSettings } from '../types';
 import { AXIOS, FileUploadConfig, uploadFile } from './endpoints';
 
 export function readSystemStatus(timeout?: number): AxiosPromise<SystemStatus> {
@@ -26,3 +26,11 @@ export function updateOTASettings(otaSettings: OTASettings): AxiosPromise<OTASet
 export const uploadFirmware = (file: File, config?: FileUploadConfig): AxiosPromise<void> => (
   uploadFile('/uploadFirmware', file, config)
 );
+
+export function readSystemSettings(): AxiosPromise<SystemSettings> {
+  return AXIOS.get('/systemSettings');
+}
+
+export function updateSystemSettings(systemSettings: SystemSettings): AxiosPromise<SystemSettings> {
+  return AXIOS.post('/systemSettings', systemSettings);
+}

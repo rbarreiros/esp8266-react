@@ -1,14 +1,14 @@
-#include "RelayMqttSettingsService.h"
+#include "GarageMqttSettingsService.h"
 #include <SettingValue.h>
 
-void RelayMqttSettings::read(RelayMqttSettings& settings, JsonObject& root) 
+void GarageMqttSettings::read(GarageMqttSettings& settings, JsonObject& root) 
 {
     root["mqtt_path"] = settings.mqttPath;
     root["name"] = settings.name;
     root["unique_id"] = settings.uniqueId;
 }
 
-StateUpdateResult RelayMqttSettings::update(JsonObject& root, RelayMqttSettings& settings) 
+StateUpdateResult GarageMqttSettings::update(JsonObject& root, GarageMqttSettings& settings) 
 {
     settings.mqttPath = root["mqtt_path"] | SettingValue::format("homeassistant/switch/#{unique_id}");
     settings.name = root["name"] | SettingValue::format("light-#{unique_id}");
@@ -17,29 +17,29 @@ StateUpdateResult RelayMqttSettings::update(JsonObject& root, RelayMqttSettings&
     return StateUpdateResult::CHANGED;
 }
 
-RelayMqttSettingsService::RelayMqttSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) 
+GarageMqttSettingsService::GarageMqttSettingsService(AsyncWebServer* server, FS* fs, SecurityManager* securityManager) 
     :
     m_httpEndpoint
     {
-        RelayMqttSettings::read,
-        RelayMqttSettings::update,
+        GarageMqttSettings::read,
+        GarageMqttSettings::update,
         this,
         server,
-        RELAY_SETTINGS_PATH,
+        GARAGE_SETTINGS_PATH,
         securityManager,
         AuthenticationPredicates::IS_AUTHENTICATED
     },
     m_fsPersistence
     {
-        RelayMqttSettings::read, 
-        RelayMqttSettings::update, 
+        GarageMqttSettings::read, 
+        GarageMqttSettings::update, 
         this, 
         fs, 
-        RELAY_SETTINGS_FILE
+        GARAGE_SETTINGS_FILE
     } 
 {}
 
-void RelayMqttSettingsService::begin() 
+void GarageMqttSettingsService::begin() 
 {
   m_fsPersistence.readFromFS();
 }

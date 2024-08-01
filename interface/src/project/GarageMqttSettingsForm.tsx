@@ -1,22 +1,20 @@
 import { FC, useState } from "react";
 import { ValidateFieldsError } from "async-validator";
-
 import { Button } from "@mui/material";
 import SaveIcon from '@mui/icons-material/Save';
-
 import { ButtonRow, FormLoader, MessageBox, SectionContent, ValidatedTextField } from "../components";
 import { validate } from "../validators";
 import { useRest, updateValue } from "../utils";
 
-import * as DemoApi from './api';
-import { LightMqttSettings } from "./types";
-import { LIGHT_MQTT_SETTINGS_VALIDATOR } from "./validators";
+import * as GarageApi from './api';
+import { GarageMqttSettings } from "./types";
+import { GARAGE_MQTT_SETTINGS_VALIDATOR } from "./validators";
 
-const LightMqttSettingsForm: FC = () => {
+const GarageMqttSettingsForm: FC = () => {
   const [fieldErrors, setFieldErrors] = useState<ValidateFieldsError>();
   const {
     loadData, saveData, saving, setData, data, errorMessage
-  } = useRest<LightMqttSettings>({ read: DemoApi.readBrokerSettings, update: DemoApi.updateBrokerSettings });
+  } = useRest<GarageMqttSettings>({ read: GarageApi.readBrokerSettings, update: GarageApi.updateBrokerSettings });
 
   const updateFormValue = updateValue(setData);
 
@@ -28,7 +26,7 @@ const LightMqttSettingsForm: FC = () => {
     const validateAndSubmit = async () => {
       try {
         setFieldErrors(undefined);
-        await validate(LIGHT_MQTT_SETTINGS_VALIDATOR, data);
+        await validate(GARAGE_MQTT_SETTINGS_VALIDATOR, data);
         saveData();
       } catch (errors: any) {
         setFieldErrors(errors);
@@ -88,4 +86,4 @@ const LightMqttSettingsForm: FC = () => {
   );
 };
 
-export default LightMqttSettingsForm;
+export default GarageMqttSettingsForm;

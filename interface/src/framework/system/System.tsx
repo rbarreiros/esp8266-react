@@ -9,6 +9,7 @@ import { FeaturesContext } from '../../contexts/features';
 import UploadFirmwareForm from './UploadFirmwareForm';
 import SystemStatusForm from './SystemStatusForm';
 import OTASettingsForm from './OTASettingsForm';
+import SystemSettingsForm from './SystemSettingsForm';
 
 const System: FC = () => {
   useLayoutTitle("System");
@@ -21,6 +22,7 @@ const System: FC = () => {
     <>
       <RouterTabs value={routerTab}>
         <Tab value="status" label="System Status" />
+        <Tab value="settings" label="System Settings" />
         {features.ota && (
           <Tab value="ota" label="OTA Settings" disabled={!me.admin} />
         )}
@@ -30,6 +32,7 @@ const System: FC = () => {
       </RouterTabs>
       <Routes>
         <Route path="status" element={<SystemStatusForm />} />
+        <Route path="settings" element={<SystemSettingsForm />} />
         {features.ota && (
           <Route
             path="ota"

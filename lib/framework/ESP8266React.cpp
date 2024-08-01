@@ -36,7 +36,8 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
 #endif
     _restartService{server, &_securitySettingsService},
     _factoryResetService{server, &ESPFS, &_securitySettingsService},
-    _systemStatus{server, &_securitySettingsService} 
+    _systemStatus{server, &_securitySettingsService},
+    _systemSettings{server, &_apSettingsService, &_factoryResetService, &ESPFS, &_securitySettingsService}
 {
 #ifdef PROGMEM_WWW
   // Serve static resources from PROGMEM
@@ -112,6 +113,7 @@ void ESP8266React::begin() {
 #if FT_ENABLED(FT_SECURITY)
   _securitySettingsService.begin();
 #endif
+  _systemSettings.begin();
 }
 
 void ESP8266React::loop() {
