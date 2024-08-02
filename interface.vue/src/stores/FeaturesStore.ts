@@ -25,10 +25,10 @@ export const useFeaturesStore = () => {
         actions: {
             async fetchFeatures() {
                 try {
-                    const response = await FeaturesApi.readFeatures();
-                    console.log(response);
+                    //const response = await FeaturesApi.readFeatures();
+                    //console.log(response);
                     
-                    this.data = response.data;
+                    //this.data = response.data;
                     this.loaded = true;
                 } catch (error: any) {
                     this.loaded = false;

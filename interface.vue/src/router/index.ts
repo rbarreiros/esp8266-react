@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 // Framework
-import Home from '@/components/layout/Home.vue'
 import WiFiConnection from '@/framework/wifi/WiFiConnection.vue'
 import AccessPoint from '@/framework/ap/AccessPoint.vue'
 import NetworkTime from '@/framework/ntp/NetworkTime.vue'
@@ -13,6 +12,7 @@ import SignIn from '@/SignIn.vue'
 // Project route
 import projectroutes from '@/project/ProjectRoute'
 import Project from '@/project/Project.vue'
+import { useFeaturesStore } from '@/stores/FeaturesStore'
 
 const ProjectPath = '/' + import.meta.env.VITE_APP_PROJECT_PATH || '/proj';
 
@@ -21,63 +21,79 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'login',
-      component: SignIn
+      redirect: to => {
+        const features = useFeaturesStore();
+
+        if(features.data.project)
+          return { path: '/' + ProjectPath }
+        else 
+          return { path: '/wifi' }
+      }
     },
     {
       path: ProjectPath,
       name: 'project',
       component: Project,
-      children: projectroutes
+      children: projectroutes,
+      meta: {
+        requiredAuth: true
+      }
     },
     {
       path: '/wifi/:pathMatch(.*)*',
       name: 'wifi',
-      component: WiFiConnection
+      component: WiFiConnection,
+      meta: {
+        requiredAuth: true
+      }
     },
     {
       path: '/ap/:pathMatch(.*)*',
       name: 'ap',
-      component: AccessPoint
+      component: AccessPoint,
+      meta: {
+        requiredAuth: true
+      }
     },
     {
       path: '/ntp/:pathMatch(.*)*',
       name: 'ntp',
-      component: NetworkTime
+      component: NetworkTime,
+      meta: {
+        requiredAuth: true
+      }
     },
     {
       path: '/mqtt/:pathMatch(.*)*',
       name: 'mqtt',
-      component: Mqtt
+      component: Mqtt,
+      meta: {
+        requiredAuth: true
+      }
     },
     {
       path: '/security/:pathMatch(.*)*',
       name: 'security',
-      component: Security
+      component: Security,
+      meta: {
+        requiredAuth: true
+      }
     },
     {
       path: '/system/:pathMatch(.*)*',
       name: 'system',
-      component: System
+      component: System,
+      meta: {
+        requiredAuth: true
+      }
     },
-
-
-
-    /*
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue')
-    }
-    */
   ]
 })
 
 router.beforeEach((to, from, next) => {
-  if(to.meta.requiredAuth)
+  const features = useFeaturesStore();
+
+  if(to.meta.requiredAuth && features.data.security)
   {
     const token = localStorage.getItem('token');
     if(token)

@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import Snackbar from '@/components/layout/Snackbar.vue';
-import AppRouting from '@/AppRouting.vue';
 </script>
 
 <template>
     <v-app>
         <Snackbar/>
-        <AppRouting/>
+        <RouterView/>
     </v-app>
 </template>
 

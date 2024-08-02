@@ -5,16 +5,7 @@
       v-model="drawer"
       :rail="miniVariant"
     >
-      <v-list class="pt-0" dense>
-          <ProjectMenu/>
-          <v-divider></v-divider>
-          <NavItem :to="{ name: 'wifi' }" itemTitle="WiFi Connection" :mdiIcon="mdiWifi"/>
-          <NavItem :to="{ name: 'ap' }" itemTitle="Access Point" :mdiIcon="mdiVideoInputAntenna"/>
-          <NavItem :to="{ name: 'ntp' }" itemTitle="Network Time" :mdiIcon="mdiClockOutline"/>
-          <NavItem :to="{ name: 'mqtt' }" itemTitle="MQTT" :mdiIcon="mdiHubspot"/>
-          <NavItem :to="{ name: 'security' }" itemTitle="Security" :mdiIcon="mdiLock"/>
-          <NavItem :to="{ name: 'system' }" itemTitle="System" :mdiIcon="mdiCog"/>
-        </v-list>
+      <LayoutMenu/>
     </v-navigation-drawer>
 
     <v-app-bar app color="primary" dark>
@@ -45,7 +36,7 @@
 
     <v-main>
       <v-container fluid>
-        <RouterView />
+        <slot></slot>
       </v-container>
     </v-main>
   </v-app>
@@ -53,26 +44,19 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed } from 'vue';
-import NavItem from '@/components/layout/NavItem.vue';
-import ProjectMenu from '@/project/ProjectMenu.vue';
+import LayoutMenu from '@/components/layout/LayoutMenu.vue';
 
 import {
-  mdiWifi,
-  mdiVideoInputAntenna,
-  mdiClockOutline,
-  mdiHubspot,
-  mdiLock,
-  mdiCog,
   mdiMenu,
   mdiBell,
+  mdiCog
 } from '@mdi/js';
 
 export default defineComponent({
   name: 'DrawerLayout',
 
   components: {
-    NavItem,
-    ProjectMenu
+    LayoutMenu
   },
 
   setup() {
@@ -91,11 +75,6 @@ export default defineComponent({
     return {
       drawer,
       miniVariant,
-      mdiWifi,
-      mdiVideoInputAntenna,
-      mdiClockOutline,
-      mdiHubspot,
-      mdiLock,
       mdiSize,
       mdiMenu,
       mdiBell,
