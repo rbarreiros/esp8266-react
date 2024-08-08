@@ -103,6 +103,7 @@ GarageStateService::GarageStateService(AsyncWebServer* server,
         AuthenticationPredicates::IS_AUTHENTICATED
     },
     m_mqttClient {mqttClient},
+    /*
     m_fs 
     {
         GarageState::read,
@@ -111,6 +112,7 @@ GarageStateService::GarageStateService(AsyncWebServer* server,
         fs,
         GARAGE_STATE_SETTINGS_FILE
     },
+    */
     m_garageMqttSettingsService {garageMqttSettingsService}
 {
 
@@ -128,9 +130,14 @@ void GarageStateService::begin()
 {
     // Read from FS first, not before setting pinmode
     // to disable relay if it was save as ON
-    m_fs.readFromFS();
+    //m_fs.readFromFS();
     if(_state.relayOn)
         _state.relayOn = false;
+
+    // for now, we need to fix fs persistence
+    _state.relayAutoOff = true;
+    _state.relayOnTimer = 1000;
+
 
     // Configure relay Pin
     pinMode(RELAY_PIN, OUTPUT);
@@ -163,7 +170,6 @@ void GarageStateService::registerConfig()
 
 void GarageStateService::onConfigUpdate()
 {
-
     digitalWrite(RELAY_PIN, _state.relayOn ? RELAY_ON : RELAY_OFF);
 
     if(_state.relayOn && _state.relayAutoOff)

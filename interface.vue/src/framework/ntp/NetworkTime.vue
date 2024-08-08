@@ -1,3 +1,0 @@
-<template>
-    Network Time
-</template>

@@ -1,12 +1,14 @@
-#ifndef _RELAYSTATESERVICE_H_
-#define _RELAYSTATESERVICE_H_
+#ifndef _GARAGESTATESERVICE_H_
+#define _GARAGESTATESERVICE_H_
 
 #include <HttpEndpoint.h>
 #include <StatefulService.h>
 #include <MqttPubSub.h>
 #include <WebSocketTxRx.h>
 #include <FSPersistence.h>
+
 #include "GarageMqttSettingsService.h"
+#include "RFRemoteController.h"
 
 // TODO Move blue led to wifi status
 
@@ -77,7 +79,7 @@ private:
     MqttPubSub<GarageState>     m_mqttPubSub;
     WebSocketTxRx<GarageState>  m_webSocket;
     espMqttClientAsync*         m_mqttClient;
-    FSPersistence<GarageState>  m_fs;
+    //FSPersistence<GarageState>  m_fs;
     GarageMqttSettingsService*  m_garageMqttSettingsService;
 
     GarageState::GarageStatus_t m_lastEsState = GarageState::STATUS_ERROR;
@@ -85,6 +87,7 @@ private:
     void registerConfig();
     void onConfigUpdate();
     void updateEndstops();
+    //void onRemoteReceived(RemotePacket packet, RemoteSerial serial);
 };
 
 #endif
