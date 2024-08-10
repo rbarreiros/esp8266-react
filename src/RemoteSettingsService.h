@@ -24,12 +24,20 @@ extern AsyncTimer Timer; // Global timer
 
 #define REMOTE_DEFAULT_PAIRING_TIMEOUT  60000 // 60 seconds, 1 minute
 
+struct Remote
+{
+    uint8_t button;
+    char description[64]; // must be null terminated!
+    uint8_t serial[4];
+};
+
+using RemoteList = std::vector<Remote>;
+
 class RemoteSettings
 {
 public:
-    std::list<Remote> remotes;
+    RemoteList remotes;
     unsigned long pairingTimeout; // add to settings
-    bool isPairing;
 
     static void read(RemoteSettings& settings, JsonObject& root)
     {
@@ -91,11 +99,15 @@ public:
     );
 
     void begin();
+    
+    RemoteList& getRemotes() { return _state.remotes; }
+    String getDescription(RemotePacket packet, RemoteSerial serial);
+    bool isValid(RemotePacket packet, RemoteSerial serial);
 
 private:
     HttpEndpoint<RemoteSettings>    m_httpEndpoint;
     WebSocketTxRx<RemoteSettings>   m_webSocket; // Only used for pairing remotes
-    //FSPersistence<RemoteSettings>   m_fs;
+    FSPersistence<RemoteSettings>   m_fs;
     SecurityManager*                m_security;
     GarageStateService*             m_garageService;
     RfRemoteController*             m_remoteCtrl;
@@ -110,7 +122,7 @@ private:
     void updateRemote(AsyncWebServerRequest *request, JsonVariant &json);
     void deleteRemote(AsyncWebServerRequest *request, JsonVariant &json);
     
-    void onRemoteReceived(RemotePacket packet, RemoteSerial serial);
+    //void onRemoteReceived(RemotePacket packet, RemoteSerial serial);
 };
 
 

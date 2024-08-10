@@ -1,10 +1,11 @@
 #include <ESP8266React.h>
 #include <AsyncTimer.h>
-#include <GarageMqttSettingsService.h>
-#include <GarageStateService.h>
 
-#include <RemoteSettingsService.h>
-#include <RFRemoteController.h>
+#include "GarageStateService.h"
+#include "GarageSettingsService.h"
+#include "RFRemoteController.h"
+#include "RemoteSettingsService.h"
+#include "RemoteStateService.h"
 
 #define SERIAL_BAUD_RATE 115200
 
@@ -15,22 +16,26 @@ AsyncWebServer server(80);
 ESP8266React esp8266React(&server);
 
 // Gate control
-GarageMqttSettingsService garageSettingsService = GarageMqttSettingsService(
-  &server, esp8266React.getFS(), esp8266React.getSecurityManager()
+GarageStateService garageState = GarageStateService(
+  &server, esp8266React.getSecurityManager()
 );
 
-GarageStateService garageService = GarageStateService(
-  &server, esp8266React.getSecurityManager(), 
-  esp8266React.getMqttClient(), esp8266React.getFS(),
-  &garageSettingsService
+GarageSettingsService garageSettings = GarageSettingsService(
+  &server, esp8266React.getSecurityManager(),
+  esp8266React.getFS(), &garageState
 );
 
 // Remote control
 RfRemoteController rfController;
 
-RemoteSettingsService remoteService = RemoteSettingsService(
+RemoteSettingsService remoteSettings = RemoteSettingsService(
   &server, esp8266React.getSecurityManager(), 
-  esp8266React.getFS(), &garageService, &rfController
+  esp8266React.getFS(), &garageState, &rfController
+);
+
+RemoteStateService remoteState = RemoteStateService(
+  &server, esp8266React.getSecurityManager(),
+  &rfController, &remoteSettings, &garageState
 );
 
 
@@ -42,12 +47,18 @@ void setup()
   // start the framework 
   esp8266React.begin();
 
-  // Start relay stuff
-  garageService.begin();
-  garageSettingsService.begin();
+  /**
+   * Start garage door stuff
+   * It's important to start garage state
+   * first, to configure hardware, and settings
+   * after to set settings 
+   */
+  garageState.begin();
+  garageSettings.begin();
 
   // Start remote stuff
-  remoteService.begin();
+  remoteSettings.begin();
+  remoteState.begin();
 
   // setup rf controller
   rfController.begin();
@@ -69,6 +80,6 @@ void loop() {
   esp8266React.loop();
 
   // Garage door handling
-  // endstop status
-  garageService.loop();
+  // endstop and door status
+  garageState.loop();
 }

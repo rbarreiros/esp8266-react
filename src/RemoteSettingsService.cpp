@@ -19,13 +19,11 @@ RemoteSettingsService::RemoteSettingsService(AsyncWebServer* server,
                 REMOTE_SETTINGS_SOCKET_PATH,
                 security,
                 AuthenticationPredicates::IS_ADMIN},
-    /*
     m_fs{RemoteSettings::read,
          RemoteSettings::update,  // should only be used for batch, but, most likely not used
          this,
          fs,
          REMOTE_SETTINGS_FILE},
-    */
     m_security{security},
     m_garageService{garage},
     m_remoteCtrl{remoteCtrl},
@@ -55,12 +53,23 @@ RemoteSettingsService::RemoteSettingsService(AsyncWebServer* server,
   server->addHandler(&m_deleteHandler);
 
   // When a remote code is received, it calls this method
-  m_remoteCtrl->addCallback(
-      std::bind(&RemoteSettingsService::onRemoteReceived, this, std::placeholders::_1, std::placeholders::_2));
+  //m_remoteCtrl->addCallback(
+    //std::bind(&RemoteSettingsService::onRemoteReceived, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void RemoteSettingsService::begin() {
 }
+
+String RemoteSettingsService::getDescription(RemotePacket packet, RemoteSerial serial)
+{
+    return "Test description";
+}
+
+bool RemoteSettingsService::isValid(RemotePacket packet, RemoteSerial serial)
+{
+    return true;
+}
+
 
 void RemoteSettingsService::createRemote(AsyncWebServerRequest* request, JsonVariant& json) {
 }
@@ -74,6 +83,7 @@ void RemoteSettingsService::updateRemote(AsyncWebServerRequest* request, JsonVar
 void RemoteSettingsService::deleteRemote(AsyncWebServerRequest* request, JsonVariant& json) {
 }
 
+/*
 void RemoteSettingsService::onRemoteReceived(RemotePacket packet, RemoteSerial serial) {
   // Check if serial is in our database, if it is, return its reccord
     Serial.printf("Received button press %d from serial %02x %02x %02x %02x\r\n",
@@ -89,3 +99,4 @@ void RemoteSettingsService::onRemoteReceived(RemotePacket packet, RemoteSerial s
         },
     "remotes");
 }
+*/

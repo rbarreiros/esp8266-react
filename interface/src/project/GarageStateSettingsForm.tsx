@@ -4,10 +4,14 @@ import { ValidateFieldsError } from 'async-validator';
 import { Avatar, Button, Divider, List, ListItem, ListItemAvatar, ListItemText, Switch, Theme, useTheme } from "@mui/material";
 import { WEB_SOCKET_ROOT } from '../api/endpoints';
 import { ButtonRow, BlockFormControlLabel, FormLoader, ValidatedTextField, SectionContent } from '../components';
-import { numberValue, updateValue, useWs } from '../utils';
-import { GarageStatus, GarageState } from './types';
+import { numberValue, updateValue, useWs, useRest } from '../utils';
+import { GarageStatus, GarageState, GarageSettings } from './types';
 import GarageIcon from '@mui/icons-material/Garage';
+import SaveIcon from '@mui/icons-material/Save';
 import DoNotDisturbOnIcon from '@mui/icons-material/DoNotDisturbOn';
+import * as GarageApi from './api'
+import { GARAGE_SETTINGS_VALIDATOR } from './validators';
+import { validate } from '../validators';
 
 export const GARAGE_SETTINGS_WEBSOCKET_URL = WEB_SOCKET_ROOT + "garageState";
 
@@ -69,17 +73,38 @@ const garageStatusHighlight = ({ status }: GarageState, theme: Theme) => {
   }
 };
 
-const GarageStateWebSocketForm: FC = () => {
-  const { connected, updateData, data } = useWs<GarageState>(GARAGE_SETTINGS_WEBSOCKET_URL);
+const GarageStateSettingsForm: FC = () => {
+  const { connected, updateData, data: wsData } = useWs<GarageState>(GARAGE_SETTINGS_WEBSOCKET_URL);
+  const {
+    loadData, saveData, saving, setData, data: restData, errorMessage
+  } = useRest<GarageSettings>({ read: GarageApi.readGarageSettings, update: GarageApi.updateGarageSettings });
+
   const [fieldErrors, setFieldErrors] = useState<ValidateFieldsError>();
 
-  const updateFormValue = updateValue(updateData);
+  const updateWsFormValue = updateValue(updateData);
+  const updateRestFormValue = updateValue(setData);
+
   const theme = useTheme();
 
   const content = () => {
-    if (!connected || !data) {
+    if (!connected || !wsData) {
       return (<FormLoader message="Connecting to WebSocket…" />);
     }
+
+    if(!restData)
+    {
+      return (<FormLoader onRetry={loadData} errorMessage={errorMessage} />);
+    }
+
+    const validateAndSubmit = async () => {
+      try {
+        setFieldErrors(undefined);
+        await validate(GARAGE_SETTINGS_VALIDATOR, restData);
+        saveData();
+      } catch (errors: any) {
+        setFieldErrors(errors);
+      }
+    };
 
     return (
       <>
@@ -88,29 +113,29 @@ const GarageStateWebSocketForm: FC = () => {
         <List>
           <ListItem>
             <ListItemAvatar>
-              <Avatar sx={{ bgcolor: garageStatusHighlight(data, theme) }}>
+              <Avatar sx={{ bgcolor: garageStatusHighlight(wsData, theme) }}>
                 <GarageIcon />
               </Avatar>
             </ListItemAvatar>
-            <ListItemText primary="Status" secondary={garageStatus(data)} />
+            <ListItemText primary="Status" secondary={garageStatus(wsData)} />
           </ListItem>
           <Divider variant="inset" component="li" />
           <ListItem>
             <ListItemAvatar>
-              <Avatar sx={{ bgcolor: endstopClosedStatusHighlight(data, theme) }}>
+              <Avatar sx={{ bgcolor: endstopClosedStatusHighlight(wsData, theme) }}>
                 <DoNotDisturbOnIcon />
               </Avatar>
             </ListItemAvatar>
-            <ListItemText primary="Status" secondary={endstopClosedStatus(data)} />
+            <ListItemText primary="Status" secondary={endstopClosedStatus(wsData)} />
           </ListItem>
           <Divider variant="inset" component="li" />
           <ListItem>
             <ListItemAvatar>
-              <Avatar sx={{ bgcolor: endstopOpenStatusHighlight(data, theme) }}>
+              <Avatar sx={{ bgcolor: endstopOpenStatusHighlight(wsData, theme) }}>
                 <DoNotDisturbOnIcon />
               </Avatar>
             </ListItemAvatar>
-            <ListItemText primary="Status" secondary={endstopOpenStatus(data)} />
+            <ListItemText primary="Status" secondary={endstopOpenStatus(wsData)} />
           </ListItem>
         </List>
         </SectionContent>
@@ -119,8 +144,8 @@ const GarageStateWebSocketForm: FC = () => {
             control={
               <Switch
                 name="relay_on"
-                checked={data.relay_on}
-                onChange={updateFormValue}
+                checked={wsData.relay_on}
+                onChange={updateWsFormValue}
                 color="primary"
               />
             }
@@ -132,8 +157,8 @@ const GarageStateWebSocketForm: FC = () => {
             control={
               <Switch
                 name="relay_auto_off"
-                checked={data.relay_auto_off}
-                onChange={updateFormValue}
+                checked={restData.relay_auto_off}
+                onChange={updateRestFormValue}
                 color="primary"
               />
             }
@@ -144,11 +169,16 @@ const GarageStateWebSocketForm: FC = () => {
             label="Relay On Time"
             fullWidth
             variant="outlined"
-            value={numberValue(data.relay_on_timer)}
+            value={numberValue(restData.relay_on_timer)}
             type="number"
-            onChange={updateFormValue}
+            onChange={updateRestFormValue}
             margin="normal"
         />
+        <ButtonRow mt={1}>
+          <Button startIcon={<SaveIcon />} disabled={saving} variant="contained" color="primary" type="submit" onClick={validateAndSubmit}>
+            Save
+          </Button>
+        </ButtonRow>
         </SectionContent>
       </>
     );
@@ -161,4 +191,4 @@ const GarageStateWebSocketForm: FC = () => {
   );
 };
 
-export default GarageStateWebSocketForm;
+export default GarageStateSettingsForm;

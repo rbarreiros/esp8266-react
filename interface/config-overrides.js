@@ -22,8 +22,8 @@ module.exports = function override(config, env) {
     terserPlugin.options.extractComments = false;
 
     // build progmem data files
-    //config.plugins.push(new ProgmemGenerator({ outputPath: "../lib/framework/WWWData.h", bytesPerLine: 20 }));
-    config.plugins.push(new ProgmemGenerator({ outputPath: "./WWWData.h", bytesPerLine: 20 }));
+    config.plugins.push(new ProgmemGenerator({ outputPath: "../lib/framework/WWWData.h", bytesPerLine: 20 }));
+    //config.plugins.push(new ProgmemGenerator({ outputPath: "./WWWData.h", bytesPerLine: 20 }));
   }
   return config;
 };

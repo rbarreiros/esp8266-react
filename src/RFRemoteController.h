@@ -15,13 +15,6 @@
 // to start validation. Should also check counter
 #define MIN_PACKETS_ACCEPTED 3 
 
-struct Remote
-{
-    uint8_t button;
-    char description[64]; // must be null terminated!
-    uint8_t serial[4];
-};
-
 using RfRemoteControllerCallback = std::function<void (RemotePacket packet, RemoteSerial serial)>; 
 
 class RfRemoteController

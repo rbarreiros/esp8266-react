@@ -8,11 +8,14 @@ export enum GarageStatus {
 
 export interface GarageState {
   relay_on: boolean;
-  relay_auto_off: boolean;
-  relay_on_timer: number;
   endstop_closed: boolean;
   endstop_open: boolean;
   status: GarageStatus;
+}
+
+export interface GarageSettings {
+  relay_auto_off: boolean;
+  relay_on_timer: number;
 }
 
 export interface GarageMqttSettings {

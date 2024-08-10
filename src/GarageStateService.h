@@ -1,23 +1,14 @@
 #ifndef _GARAGESTATESERVICE_H_
 #define _GARAGESTATESERVICE_H_
 
-#include <HttpEndpoint.h>
 #include <StatefulService.h>
-#include <MqttPubSub.h>
 #include <WebSocketTxRx.h>
-#include <FSPersistence.h>
 
-#include "GarageMqttSettingsService.h"
 #include "RFRemoteController.h"
 
-// TODO Move blue led to wifi status
-
-#define GARAGE_SETTINGS_ENDPOINT_PATH "/rest/garageState"
-#define GARAGE_SETTINGS_SOCKET_PATH "/ws/garageState"
+#define GARAGE_STATE_SOCKET_PATH "/ws/garageState"
 
 #define DEFAULT_RELAY_STATE false
-#define DEFAULT_RELAY_AUTO_OFF true
-#define DEFAULT_RELAY_TIMER 1000
 
 #define RELAY_PIN       5
 #define RELAY_ON        HIGH
@@ -36,8 +27,6 @@
 #define ENDSTOP_OPEN_ON     LOW
 #define ENDSTOP_OPEN_OFF    HIGH
 
-#define GARAGE_STATE_SETTINGS_FILE "/config/garageState.json"
-
 class GarageState
 {
 public:
@@ -50,9 +39,6 @@ public:
     };
 
     bool relayOn;
-    bool relayAutoOff;
-    unsigned long relayOnTimer;
-
     GarageStatus_t status = STATUS_ERROR;   // current status of garage door
     bool endstopClosed = false;             // status of close endstop 
     bool endstopOpen = false;               // status of open endstop
@@ -67,27 +53,28 @@ class GarageStateService : public StatefulService<GarageState>
 {
 public:
     GarageStateService(AsyncWebServer* server,
-                       SecurityManager* securityManager,
-                       espMqttClientAsync* mqttClient,
-                       FS *fs,
-                       GarageMqttSettingsService* garageMqttSettingsService);
+                       SecurityManager* securityManager);
     void begin();
     void loop();
 
+    void setRelayAutoOff(bool off) { m_relayAutoOff = off; }
+    void setRelayOnTimer(unsigned long timer) { m_relayOnTimer = timer; }
+    bool getRelayAutoOff() { return m_relayAutoOff; }
+    unsigned long getRelayOnTimer() { return m_relayOnTimer; }
+
 private:
-    HttpEndpoint<GarageState>   m_httpEndpoint;
-    MqttPubSub<GarageState>     m_mqttPubSub;
     WebSocketTxRx<GarageState>  m_webSocket;
-    espMqttClientAsync*         m_mqttClient;
-    //FSPersistence<GarageState>  m_fs;
-    GarageMqttSettingsService*  m_garageMqttSettingsService;
 
     GarageState::GarageStatus_t m_lastEsState = GarageState::STATUS_ERROR;
+    bool                        m_relayAutoOff;
+    unsigned long               m_relayOnTimer;
+
+
+
 
     void registerConfig();
     void onConfigUpdate();
     void updateEndstops();
-    //void onRemoteReceived(RemotePacket packet, RemoteSerial serial);
 };
 
 #endif

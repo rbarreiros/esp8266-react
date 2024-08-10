@@ -4,7 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { Tab } from '@mui/material';
 import { RouterTabs, useRouterTab, useLayoutTitle } from '../components';
 
-import GarageStateWebSocketForm from './GarageStateWebSocketForm';
+import GarageStateSettingsForm from './GarageStateSettingsForm';
 import GarageMqttSettingsForm from './GarageMqttSettingsForm';
 
 const DemoProject: FC = () => {
@@ -18,7 +18,7 @@ const DemoProject: FC = () => {
         <Tab value="mqtt" label="MQTT Settings" />
       </RouterTabs>
       <Routes>
-        <Route path="socket" element={<GarageStateWebSocketForm />} />
+        <Route path="socket" element={<GarageStateSettingsForm />} />
         <Route path="mqtt" element={<GarageMqttSettingsForm />} />
         <Route path="/*" element={<Navigate replace to="socket" />} />
       </Routes>

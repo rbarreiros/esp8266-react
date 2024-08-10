@@ -44,6 +44,7 @@ void SystemSettingsService::begin()
 
 void SystemSettingsService::loop()
 {
+    /* FIX
     if(_state.resetEnabled)
         processResetButton();
 
@@ -52,6 +53,7 @@ void SystemSettingsService::loop()
 
     if(m_toggleLed)
         toggleLed();
+    */
 }
 
 void SystemSettingsService::configureSystemSettings()

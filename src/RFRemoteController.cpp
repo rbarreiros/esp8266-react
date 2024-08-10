@@ -2,20 +2,8 @@
 
 RfRemoteController* RfRemoteController::m_thisPtr = nullptr;
 
-void callback_debug(const BitVector* recorded) {
-  // Serial.print(F("Code received: "));
-  //char* printed_code = recorded->to_str();
-
-    /*
-  if (printed_code) {
-    // Serial.print(recorded->get_nb_bits());
-    // Serial.print(F(" bits: ["));
-    Serial.println(printed_code);
-    // Serial.print(F("]\n"));
-
-    free(printed_code);
-  }
-  */
+void callback_debug(const BitVector* recorded) 
+{
     RfRemoteController::getPtr()->processCode(recorded);
 }
 
@@ -54,8 +42,6 @@ void RfRemoteController::processCode(const BitVector* recorded)
 
         if(m_lastHashCount == MIN_PACKETS_ACCEPTED)
         {
-            Serial.println("Processing");
-
             RemotePacket packet = getPacket(recorded);
             RemoteSerial ser = RemoteManager::getSerial(recorded);
             

@@ -87,6 +87,7 @@
     ]
   },
   "devDependencies": {
+    "svelteesp32": "^1.2.7",
     "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4"
   }
