@@ -23,3 +23,31 @@ export interface GarageMqttSettings {
   name: string;
   mqtt_path: string;
 }
+
+export interface Remote {
+  id: string;
+  button: number;
+  description: string;
+  serial: string;
+}
+
+export interface RemoteSettings {
+  pairing_timeout: number;
+  remotes: Remote[]
+}
+
+export interface RemoteState {
+  remote_id?: string | undefined;
+  remote_button?: number | undefined;
+  remote_serial?: string | undefined;
+  remote_description?: string | undefined;
+  remote_updated_at?: string | undefined;
+  pairing?: boolean;
+  pairing_error?: string | undefined;
+}
+
+export interface RemoteMqttSettings {
+  unique_id: string;
+  name: string;
+  mqtt_path: string;
+}

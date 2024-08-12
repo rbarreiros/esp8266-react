@@ -9,7 +9,7 @@ import { GarageStatus, GarageState, GarageSettings } from './types';
 import GarageIcon from '@mui/icons-material/Garage';
 import SaveIcon from '@mui/icons-material/Save';
 import DoNotDisturbOnIcon from '@mui/icons-material/DoNotDisturbOn';
-import * as GarageApi from './api'
+import * as GarageApi from './api';
 import { GARAGE_SETTINGS_VALIDATOR } from './validators';
 import { validate } from '../validators';
 
@@ -29,19 +29,19 @@ export const garageStatus = ({status}: GarageState) => {
     case GarageStatus.STATUS_OPEN:
       return "Open";
   }
-}
+};
 
 export const endstopClosedStatus = ({ endstop_closed }: GarageState) => {
   if(endstop_closed)
     return "Closed endstop active";
-  else 
+  else
     return "Closed endstop open";
 };
 
 export const endstopOpenStatus = ({ endstop_open }: GarageState) => {
   if(endstop_open)
     return "Open endstop active";
-  else 
+  else
     return "Open endstop open";
 };
 
@@ -68,7 +68,7 @@ const garageStatusHighlight = ({ status }: GarageState, theme: Theme) => {
     case GarageStatus.STATUS_ERROR:
         return theme.palette.error.main;
     case GarageStatus.STATUS_OPENING:
-    case GarageStatus.STATUS_CLOSING:  
+    case GarageStatus.STATUS_CLOSING:
       return theme.palette.warning.main;
   }
 };
