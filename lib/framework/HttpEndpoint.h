@@ -16,14 +16,14 @@ public:
   HttpGetEndpoint(JsonStateReader<T> stateReader,
                   StatefulService<T>* statefulService,
                   AsyncWebServer* server,
-                  const String& servicePath,
+                  const char* servicePath,
                   SecurityManager* securityManager,
                   AuthenticationPredicate authenticationPredicate = AuthenticationPredicates::IS_ADMIN) 
     :
       _stateReader{stateReader}, 
       _statefulService{statefulService}
   {
-    server->on(servicePath.c_str(),
+    server->on(servicePath,
                HTTP_GET,
                securityManager->wrapRequest(std::bind(&HttpGetEndpoint::fetchSettings, this, std::placeholders::_1),
                                             authenticationPredicate));
@@ -32,12 +32,12 @@ public:
   HttpGetEndpoint(JsonStateReader<T> stateReader,
                   StatefulService<T>* statefulService,
                   AsyncWebServer* server,
-                  const String& servicePath) 
+                  const char* servicePath) 
     :
       _stateReader{stateReader}, 
       _statefulService{statefulService}
   {
-    server->on(servicePath.c_str(), HTTP_GET, std::bind(&HttpGetEndpoint::fetchSettings, this, std::placeholders::_1));
+    server->on(servicePath, HTTP_GET, std::bind(&HttpGetEndpoint::fetchSettings, this, std::placeholders::_1));
   }
 
  protected:
@@ -62,7 +62,7 @@ class HttpPostEndpoint {
                    JsonStateUpdater<T> stateUpdater,
                    StatefulService<T>* statefulService,
                    AsyncWebServer* server,
-                   const String& servicePath,
+                   const char* servicePath,
                    SecurityManager* securityManager,
                    AuthenticationPredicate authenticationPredicate = AuthenticationPredicates::IS_ADMIN) 
     :
@@ -85,7 +85,7 @@ class HttpPostEndpoint {
                    JsonStateUpdater<T> stateUpdater,
                    StatefulService<T>* statefulService,
                    AsyncWebServer* server,
-                   const String& servicePath) 
+                   const char* servicePath) 
     :
       _stateReader{stateReader},
       _stateUpdater{stateUpdater},
@@ -143,7 +143,7 @@ public:
                JsonStateUpdater<T> stateUpdater,
                StatefulService<T>* statefulService,
                AsyncWebServer* server,
-               const String& servicePath,
+               const char* servicePath,
                SecurityManager* securityManager,
                AuthenticationPredicate authenticationPredicate = AuthenticationPredicates::IS_ADMIN) 
   :
@@ -172,7 +172,7 @@ public:
                JsonStateUpdater<T> stateUpdater,
                StatefulService<T>* statefulService,
                AsyncWebServer* server,
-               const String& servicePath) 
+               const char* servicePath) 
     :
       HttpGetEndpoint<T>{stateReader, statefulService, server, servicePath},
       HttpPostEndpoint<T>{stateReader, stateUpdater, statefulService, server, servicePath} 

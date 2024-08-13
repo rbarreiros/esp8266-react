@@ -42,14 +42,16 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
 #ifdef PROGMEM_WWW
   // Serve static resources from PROGMEM
   WWWData::registerRoutes(
-      [server, this](const String& uri, const String& contentType, const uint8_t* content, size_t size) {
+      // Fix this TODO, eliminate all String usage.
+      [server, this](const char* uri, const char *contentType, const uint8_t* content, size_t size) {
+      //[server, this](const String& uri, const String& contentType, const uint8_t* content, size_t size) {
         ArRequestHandlerFunction requestHandler = [contentType, content, size](AsyncWebServerRequest* request) 
         {
           AsyncWebServerResponse* response = request->beginResponse(200, contentType, content, size);
           response->addHeader("Content-Encoding", "gzip");
           request->send(response);
         };
-        server->on(uri.c_str(), HTTP_GET, requestHandler);
+        server->on(uri, HTTP_GET, requestHandler);
         // Serving non matching get requests with "/index.html"
         // OPTIONS get a straight up 200 response
         if (uri.equals("/index.html")) 
@@ -76,7 +78,7 @@ ESP8266React::ESP8266React(AsyncWebServer* server) :
   // OPTIONS get a straight up 200 response
   server->onNotFound([](AsyncWebServerRequest* request) {
     if (request->method() == HTTP_GET) {
-      request->send(ESPFS, "/www/index.html");
+      request->send(ESPFS, "/www/index.html", "");
     } else if (request->method() == HTTP_OPTIONS) {
       request->send(200);
     } else {

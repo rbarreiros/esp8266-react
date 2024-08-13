@@ -7,6 +7,7 @@
 #include <WebSocketTxRx.h>
 #include <FSPersistence.h>
 #include <AsyncTimer.h>
+#include <string>
 
 extern AsyncTimer Timer; // Global timer
 
@@ -15,7 +16,6 @@ extern AsyncTimer Timer; // Global timer
 
 #define REMOTE_SETTINGS_FILE            "config/remotes.json"
 #define REMOTE_SETTINGS_ENDPOINT_PATH   "/rest/remoteSettings"
-#define REMOTE_SETTINGS_SOCKET_PATH     "/ws/remoteSettings"
 
 #define REMOTE_CRUD_CREATE_ENDPOINT_PATH       "/rest/remote/create"
 #define REMOTE_CRUD_READ_ENDPOINT_PATH         "/rest/remote/read"
@@ -23,12 +23,66 @@ extern AsyncTimer Timer; // Global timer
 #define REMOTE_CRUD_DELETE_ENDPOINT_PATH       "/rest/remote/delete"
 
 #define REMOTE_DEFAULT_PAIRING_TIMEOUT  60000 // 60 seconds, 1 minute
+#define REMOTE_MAX_DESCRIPTION_SIZE     64
+
 
 struct Remote
 {
-    uint8_t button;
-    char description[64]; // must be null terminated!
-    uint8_t serial[4];
+    uint8_t button = 0;
+    char description[REMOTE_MAX_DESCRIPTION_SIZE] = {0};
+    RemoteSerial serial = {0};
+
+    char* id() {
+        static char buff[11];
+        snprintf(buff, 11, "%02X%02X%02X%02X%02X",
+            button, serial.ser[0], serial.ser[1], serial.ser[2], serial.ser[3]);
+
+        return buff;
+    }
+
+    Remote()
+        : button{0}, description{}, serial{0}
+    {}
+
+    Remote(uint8_t button, const char* description, RemoteSerial serial)
+    {
+        this->button = button;
+        strncpy(this->description, description, REMOTE_MAX_DESCRIPTION_SIZE - 1);
+        this->description[REMOTE_MAX_DESCRIPTION_SIZE - 1] = '\0';
+        this->serial = serial;
+    }
+
+    bool isEqual(RemoteSerial ser)
+    {
+        return serial == ser;
+    }
+
+    void setSerial(RemoteSerial ser)
+    {
+        serial = ser;
+    }
+
+    void setSerial(const char* ser)
+    {
+        for(size_t i = 0, j = 0; i < strlen(ser); i += 2, j++)
+        {
+            char hex[3] = {ser[i], ser[i+1], '\0'};
+            serial.ser[j] = (uint8_t)strtol(hex, NULL, 16);
+        }
+    }
+
+    const char* getSerial()
+    {
+        static char serialStr[9];
+        snprintf(serialStr, sizeof(serialStr), "%02X%02X%02X%02X",
+            serial.ser[0], serial.ser[1], serial.ser[2], serial.ser[3]);
+        return serialStr;
+    }
+
+    inline bool operator==(const Remote& other)
+    {
+        return (serial == other.serial) && (button == other.button);
+    }
 };
 
 using RemoteList = std::vector<Remote>;
@@ -47,17 +101,16 @@ public:
         for(Remote rem : settings.remotes)
         {
             JsonObject r = remotes.add<JsonObject>();
+            r["id"] = rem.id();
             r["button"] = rem.button;
             r["description"] = rem.description;
-            r["serial"] = rem.serial;
+            r["serial"] = rem.getSerial();
         }
     }
 
     static StateUpdateResult update(JsonObject& root, RemoteSettings& settings)
     {
         StateUpdateResult changed = StateUpdateResult::UNCHANGED;
-
-        // Save this for batch operations and general settings
 
         unsigned long timeout = root["pairing_timeout"] | REMOTE_DEFAULT_PAIRING_TIMEOUT;
 
@@ -70,10 +123,44 @@ public:
         return changed;
     }
 
-    // Websocket
-    // Pairing
-    //static void wsRead(RemoteSettings& settings, JsonObject& root);
-    //static StateUpdateResult wsUpdate(JsonObject& root, RemoteSettings& settings);
+    // Writes to FS
+    static void readFs(RemoteSettings& settings, JsonObject& root)
+    {
+        root["pairing_timeout"] = settings.pairingTimeout;
+
+        JsonArray remotes = root["remotes"].to<JsonArray>();
+        for(Remote rem : settings.remotes)
+        {
+            JsonObject r = remotes.add<JsonObject>();
+            r["button"] = rem.button;
+            r["description"] = rem.description;
+            r["serial"] = rem.getSerial();
+        }
+    }
+
+    // Reads from FS
+    static StateUpdateResult updateFs(JsonObject& root, RemoteSettings& settings)
+    {
+        settings.pairingTimeout = root["pairing_timeout"] | REMOTE_DEFAULT_PAIRING_TIMEOUT;
+
+        settings.remotes.clear();
+        if(root["remotes"].is<JsonArray>())
+        {
+            for(JsonVariant rem : root["remotes"].as<JsonArray>())
+            {
+                Remote r;
+
+                r.button = rem["button"].as<uint8_t>();
+                strncpy(r.description, rem["description"] | "", REMOTE_MAX_DESCRIPTION_SIZE - 1);
+                r.description[REMOTE_MAX_DESCRIPTION_SIZE - 1] = '\0';
+                r.setSerial(rem["serial"] | "");
+
+                settings.remotes.push_back(r);
+            }
+        }
+
+        return StateUpdateResult::UNCHANGED;
+    }
 
     // MQTT
 
@@ -94,19 +181,25 @@ public:
         AsyncWebServer *server,
         SecurityManager *security,
         FS *fs,
-        GarageStateService *garage,
-        RfRemoteController *remoteCtrl
+        GarageStateService *garage
     );
 
     void begin();
     
     RemoteList& getRemotes() { return _state.remotes; }
-    String getDescription(RemotePacket packet, RemoteSerial serial);
+    const char* getDescription(RemotePacket packet, RemoteSerial serial);
     bool isValid(RemotePacket packet, RemoteSerial serial);
+    unsigned long getPairingTimeout() { return _state.pairingTimeout; }
+
+    bool addRemote(RemotePacket packet, RemoteSerial serial);
+    bool addRemote(RemotePacket packet, RemoteSerial serial, const char* description);
+    bool editRemote(const char* id, const char* description);
+    Remote getRemote(const char* id);
+    Remote getRemote(RemotePacket packet, RemoteSerial serial);
+    bool delRemote(const char* id);
 
 private:
     HttpEndpoint<RemoteSettings>    m_httpEndpoint;
-    WebSocketTxRx<RemoteSettings>   m_webSocket; // Only used for pairing remotes
     FSPersistence<RemoteSettings>   m_fs;
     SecurityManager*                m_security;
     GarageStateService*             m_garageService;
@@ -121,8 +214,6 @@ private:
     void readRemote(AsyncWebServerRequest *request);
     void updateRemote(AsyncWebServerRequest *request, JsonVariant &json);
     void deleteRemote(AsyncWebServerRequest *request, JsonVariant &json);
-    
-    //void onRemoteReceived(RemotePacket packet, RemoteSerial serial);
 };
 
 

@@ -23,7 +23,7 @@ SecuritySettingsService::SecuritySettingsService(AsyncWebServer* server, FS* fs)
     },
     _jwtHandler{FACTORY_JWT_SECRET} 
 {
-  addUpdateHandler([&](const String& originId) { configureJWTHandler(); }, false);
+  addUpdateHandler([&](const char* originId) { configureJWTHandler(); }, false);
 }
 
 void SecuritySettingsService::begin() 
@@ -38,16 +38,16 @@ Authentication SecuritySettingsService::authenticateRequest(AsyncWebServerReques
   
   if (authorizationHeader) 
   {
-    String value = authorizationHeader->value();
-    if (value.startsWith(AUTHORIZATION_HEADER_PREFIX)) {
-      value = value.substring(AUTHORIZATION_HEADER_PREFIX_LEN);
-      return authenticateJWT(value);
+    const char* value = authorizationHeader->value().c_str();
+    Serial.println(value);
+    if (strncmp(value, AUTHORIZATION_HEADER_PREFIX, strlen(AUTHORIZATION_HEADER_PREFIX)) == 0) {
+      return authenticateJWT(value + strlen(AUTHORIZATION_HEADER_PREFIX));
     }
   } 
   else if (request->hasParam(ACCESS_TOKEN_PARAMATER)) 
   {
-    const AsyncWebParameter* tokenParamater = request->getParam(ACCESS_TOKEN_PARAMATER);
-    String value = tokenParamater->value();
+    const AsyncWebParameter* tokenParameter = request->getParam(ACCESS_TOKEN_PARAMATER);
+    const char* value = tokenParameter->value().c_str();
     return authenticateJWT(value);
   }
 
@@ -59,18 +59,20 @@ void SecuritySettingsService::configureJWTHandler()
   _jwtHandler.setSecret(_state.jwtSecret);
 }
 
-Authentication SecuritySettingsService::authenticateJWT(String& jwt) 
+Authentication SecuritySettingsService::authenticateJWT(const char* jwt) 
 {
   JsonDocument payloadDocument;
-  _jwtHandler.parseJWT(jwt, payloadDocument);
+  _jwtHandler.parseJWT(jwt, strlen(jwt), payloadDocument);
+
+  serializeJson(payloadDocument, Serial);
 
   if (payloadDocument.is<JsonObject>()) 
   {
     JsonObject parsedPayload = payloadDocument.as<JsonObject>();
-    String username = parsedPayload["username"];
-    for (User _user : _state.users) 
+    const char* username = parsedPayload["username"];
+    for (User& _user : _state.users) 
     {
-      if (_user.username == username && validatePayload(parsedPayload, &_user)) {
+      if (strcmp(_user.username, username) == 0 && validatePayload(parsedPayload, &_user)) {
         return Authentication(_user);
       }
     }
@@ -79,11 +81,11 @@ Authentication SecuritySettingsService::authenticateJWT(String& jwt)
   return Authentication();
 }
 
-Authentication SecuritySettingsService::authenticate(const String& username, const String& password) 
+Authentication SecuritySettingsService::authenticate(const char* username, const char* password) 
 {
-  for (User _user : _state.users) 
+  for (User& _user : _state.users) 
   {
-    if (_user.username == username && _user.password == password) 
+    if (strcmp(_user.username, username) == 0 && strcmp(_user.password, password) == 0) 
     {
       return Authentication(_user);
     }
@@ -106,12 +108,12 @@ boolean SecuritySettingsService::validatePayload(JsonObject& parsedPayload, User
   return payload == parsedPayload;
 }
 
-String SecuritySettingsService::generateJWT(User* user) 
+void SecuritySettingsService::generateJWT(User* user, char* jwt, size_t len) 
 {
   JsonDocument json;
   JsonObject payload = json.to<JsonObject>();
   populateJWTPayload(payload, user);
-  return _jwtHandler.buildJWT(payload);
+  _jwtHandler.buildJWT(payload, jwt, len);
 }
 
 ArRequestFilterFunction SecuritySettingsService::filterRequest(AuthenticationPredicate predicate) 

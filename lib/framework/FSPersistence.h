@@ -89,7 +89,7 @@ public:
   {
     if (!_updateHandlerId) 
     {
-      _updateHandlerId = _statefulService->addUpdateHandler([&](const String& originId) { writeToFS(); });
+      _updateHandlerId = _statefulService->addUpdateHandler([&](const char* originId) { writeToFS(); });
     }
   }
 
@@ -105,15 +105,18 @@ public:
   // We create a directory for each missing parent
   void mkdirs() 
   {
-    String path(_filePath);
-    int index = 0;
-  
-    while ((index = path.indexOf('/', index + 1)) != -1) 
+    char path[128];  // Adjust size as needed
+    strncpy(path, _filePath, sizeof(path) - 1);
+    path[sizeof(path) - 1] = '\0';  // Ensure null-termination
+    
+    char* p = path;
+    while ((p = strchr(p + 1, '/')) != NULL) 
     {
-      String segment = path.substring(0, index);
-      if (!_fs->exists(segment)) {
-        _fs->mkdir(segment);
+      *p = '\0';  // Temporarily null-terminate the substring
+      if (!_fs->exists(path)) {
+        _fs->mkdir(path);
       }
+      *p = '/';  // Restore the slash
     }
   }
 

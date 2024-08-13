@@ -28,12 +28,14 @@
 #define OTA_SETTINGS_FILE "/config/otaSettings.json"
 #define OTA_SETTINGS_SERVICE_PATH "/rest/otaSettings"
 
+#define OTA_PASSWORD_SIZE 64
+
 class OTASettings 
 {
 public:
   bool enabled;
   int port;
-  String password;
+  char password[OTA_PASSWORD_SIZE];
 
   static void read(OTASettings& settings, JsonObject& root) 
   {
@@ -46,7 +48,11 @@ public:
   {
     settings.enabled = root["enabled"] | FACTORY_OTA_ENABLED;
     settings.port = root["port"] | FACTORY_OTA_PORT;
-    settings.password = root["password"] | FACTORY_OTA_PASSWORD;
+
+    const char* password = root["password"] | FACTORY_OTA_PASSWORD;
+    strncpy(settings.password, password, OTA_PASSWORD_SIZE - 1);
+    settings.password[OTA_PASSWORD_SIZE - 1] = '\0';
+
     return StateUpdateResult::CHANGED;
   }
 };

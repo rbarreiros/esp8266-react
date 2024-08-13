@@ -8,7 +8,7 @@
 class JsonUtils 
 {
 public:
-  static void readIP(JsonObject& root, const String& key, IPAddress& ip, const String& def) 
+  static void readIP(JsonObject& root, const char* key, IPAddress& ip, const char* def) 
   {
     IPAddress defaultIp = {};
     
@@ -19,17 +19,19 @@ public:
     readIP(root, key, ip, defaultIp);
   }
 
-  static void readIP(JsonObject& root, const String& key, IPAddress& ip, const IPAddress& defaultIp = INADDR_NONE) 
+  static void readIP(JsonObject& root, const char* key, IPAddress& ip, const IPAddress& defaultIp = INADDR_NONE) 
   {
-    if (!root[key].is<String>() || !ip.fromString(root[key].as<String>())) {
+    if (!root[key].is<const char*>() || !ip.fromString(root[key].as<const char*>())) {
       ip = defaultIp;
     }
   }
 
-  static void writeIP(JsonObject& root, const String& key, const IPAddress& ip) 
+  static void writeIP(JsonObject& root, const char* key, const IPAddress& ip) 
   {
     if (IPUtils::isSet(ip)) {
-      root[key] = ip.toString();
+      char ipStr[16];  // Max length of IPv4 address string (xxx.xxx.xxx.xxx\0)
+      snprintf(ipStr, sizeof(ipStr), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+      root[key] = ipStr;
     }
   }
 };

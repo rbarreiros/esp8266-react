@@ -13,16 +13,22 @@
 #define AUTHORIZATION_HEADER_PREFIX "Bearer "
 #define AUTHORIZATION_HEADER_PREFIX_LEN 7
 
+#define SECURITY_USERNAME_SIZE 32
+#define SECURITY_PASSWORD_SIZE 64
+
 class User 
 {
 public:
-  String username;
-  String password;
+  char username[SECURITY_USERNAME_SIZE];
+  char password[SECURITY_PASSWORD_SIZE];
   bool admin;
 
  public:
-  User(String username, String password, bool admin) : username(username), password(password), admin(admin) 
-  {}
+  User(const char* username, const char* password, bool admin) : admin(admin) 
+  {
+    strncpy(this->username, username, SECURITY_USERNAME_SIZE);
+    strncpy(this->password, password, SECURITY_PASSWORD_SIZE);
+  }
 };
 
 class Authentication 
@@ -72,12 +78,12 @@ public:
   /*
    * Authenticate, returning the user if found
    */
-  virtual Authentication authenticate(const String& username, const String& password) = 0;
+  virtual Authentication authenticate(const char* username, const char* password) = 0;
 
   /*
    * Generate a JWT for the user provided
    */
-  virtual String generateJWT(User* user) = 0;
+  virtual void generateJWT(User* user, char* jwt, size_t len) = 0;
 #endif
 
   /*

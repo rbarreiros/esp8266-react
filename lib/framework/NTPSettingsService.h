@@ -32,12 +32,16 @@
 
 #define TIME_PATH "/rest/time"
 
+#define TZLABEL_SIZE  64
+#define TZFORMAT_SIZE 64
+#define SERVER_SIZE   128
+
 class NTPSettings {
  public:
   bool enabled;
-  String tzLabel;
-  String tzFormat;
-  String server;
+  char tzLabel[TZLABEL_SIZE];
+  char tzFormat[TZFORMAT_SIZE];
+  char server[SERVER_SIZE];
 
   static void read(NTPSettings& settings, JsonObject& root) 
   {
@@ -50,9 +54,19 @@ class NTPSettings {
   static StateUpdateResult update(JsonObject& root, NTPSettings& settings) 
   {
     settings.enabled = root["enabled"] | FACTORY_NTP_ENABLED;
-    settings.server = root["server"] | FACTORY_NTP_SERVER;
-    settings.tzLabel = root["tz_label"] | FACTORY_NTP_TIME_ZONE_LABEL;
-    settings.tzFormat = root["tz_format"] | FACTORY_NTP_TIME_ZONE_FORMAT;
+
+    const char* server = root["server"] | FACTORY_NTP_SERVER;
+    strncpy(settings.server, server, SERVER_SIZE - 1);
+    settings.server[SERVER_SIZE - 1] = '\0';
+
+    const char* tzLabel = root["tz_label"] | FACTORY_NTP_TIME_ZONE_LABEL;
+    strncpy(settings.tzLabel, tzLabel, TZLABEL_SIZE - 1);
+    settings.tzLabel[TZLABEL_SIZE - 1] = '\0';
+
+    const char* tzFormat = root["tz_format"] | FACTORY_NTP_TIME_ZONE_FORMAT;
+    strncpy(settings.tzFormat, tzFormat, TZFORMAT_SIZE - 1);
+    settings.tzFormat[TZFORMAT_SIZE - 1] = '\0';
+
     return StateUpdateResult::CHANGED;
   }
 };

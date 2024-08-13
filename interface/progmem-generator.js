@@ -90,7 +90,7 @@ class ProgmemGenerator {
 
           const generateWWWClass = () => {
             // eslint-disable-next-line max-len
-            return `typedef std::function<void(const String& uri, const String& contentType, const uint8_t * content, size_t size)> RouteRegistrationHandler;
+            return `typedef std::function<void(const char* uri, const char* contentType, const uint8_t * content, size_t size)> RouteRegistrationHandler;
 
 class WWWData {
 ${indent}public:

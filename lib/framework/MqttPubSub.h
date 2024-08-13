@@ -5,6 +5,7 @@
 #include <espMqttClientAsync.h>
 
 #define MQTT_ORIGIN_ID "mqtt"
+#define TOPIC_BUFFER_SIZE 128
 
 template <class T>
 class MqttConnector 
@@ -37,15 +38,16 @@ public:
   MqttPub(JsonStateReader<T> stateReader,
           StatefulService<T>* statefulService,
           espMqttClientAsync* mqttClient,
-          const String& pubTopic = "",
+          const char* pubTopic = "",
           bool retain = false) 
     :
       MqttConnector<T>{statefulService, mqttClient},
       _stateReader{stateReader},
-      _pubTopic{pubTopic},
+      //_pubTopic{pubTopic},
       _retain{retain} 
   {
-    MqttConnector<T>::_statefulService->addUpdateHandler([&](const String& originId) { publish(); }, false);
+    strncpy(_pubTopic, pubTopic, TOPIC_BUFFER_SIZE);
+    MqttConnector<T>::_statefulService->addUpdateHandler([&](const char* originId) { publish(); }, false);
   }
 
   void setRetain(const bool retain) 
@@ -54,9 +56,10 @@ public:
     publish();
   }
 
-  void setPubTopic(const String& pubTopic) 
+  void setPubTopic(const char* pubTopic) 
   {
-    _pubTopic = pubTopic;
+    //_pubTopic = pubTopic;
+    strncpy(_pubTopic, pubTopic, TOPIC_BUFFER_SIZE);
     publish();
   }
 
@@ -68,12 +71,12 @@ public:
 
  private:
   JsonStateReader<T> _stateReader;
-  String _pubTopic;
+  char _pubTopic[TOPIC_BUFFER_SIZE];
   bool _retain;
 
   void publish() 
   {
-    if (_pubTopic.length() > 0 && MqttConnector<T>::_mqttClient->connected()) 
+    if (strlen(_pubTopic) > 0 && MqttConnector<T>::_mqttClient->connected()) 
     {
       // serialize to json doc
       JsonDocument json;
@@ -81,11 +84,12 @@ public:
       MqttConnector<T>::_statefulService->read(jsonObject, _stateReader);
 
       // serialize to string
-      String payload;
-      serializeJson(json, payload);
+      size_t len = measureJson(json);
+      char buff[len + 1];
+      serializeJson(json, buff, len + 1);
 
       // publish the payload
-      MqttConnector<T>::_mqttClient->publish(_pubTopic.c_str(), 0, _retain, payload.c_str());
+      MqttConnector<T>::_mqttClient->publish(_pubTopic, 0, _retain, buff);
     }
   }
 };
@@ -97,7 +101,7 @@ public:
   MqttSub(JsonStateUpdater<T> stateUpdater,
           StatefulService<T>* statefulService,
           espMqttClientAsync* mqttClient,
-          const String& subTopic = "") 
+          const char* subTopic = "") 
     :
       MqttConnector<T>{statefulService, mqttClient}, 
       _stateUpdater{stateUpdater}, 
@@ -113,16 +117,14 @@ public:
                                                        std::placeholders::_6));
   }
 
-  void setSubTopic(const String& subTopic) 
+  void setSubTopic(const char* subTopic) 
   {
-    if (!_subTopic.equals(subTopic)) 
+    if(strcmp(_subTopic, subTopic) != 0)
     {
-      // unsubscribe from the existing topic if one was set
-      if (_subTopic.length() > 0) {
-        MqttConnector<T>::_mqttClient->unsubscribe(_subTopic.c_str());
-      }
-      // set the new topic and re-configure the subscription
-      _subTopic = subTopic;
+      if(strlen(_subTopic) > 0)
+        MqttConnector<T>::_mqttClient->unsubscribe(_subTopic);
+
+      strncpy(_subTopic, subTopic, TOPIC_BUFFER_SIZE);
       subscribe();
     }
   }
@@ -135,12 +137,12 @@ public:
 
  private:
   JsonStateUpdater<T> _stateUpdater;
-  String _subTopic;
+  char _subTopic[TOPIC_BUFFER_SIZE];
 
   void subscribe() 
   {
-    if (_subTopic.length() > 0) {
-      MqttConnector<T>::_mqttClient->subscribe(_subTopic.c_str(), 2);
+    if (strlen(_subTopic) > 0) {
+      MqttConnector<T>::_mqttClient->subscribe(_subTopic, 2);
     }
   }
 
@@ -152,7 +154,7 @@ public:
                      size_t total) 
   {
     // we only care about the topic we are watching in this class
-    if (strcmp(_subTopic.c_str(), topic)) {
+    if (strcmp(_subTopic, topic)) {
       return;
     }
 
@@ -174,8 +176,8 @@ public:
              JsonStateUpdater<T> stateUpdater,
              StatefulService<T>* statefulService,
              espMqttClientAsync* mqttClient,
-             const String& pubTopic = "",
-             const String& subTopic = "",
+             const char* pubTopic = "",
+             const char* subTopic = "",
              bool retain = false) 
     :
       MqttConnector<T>{statefulService, mqttClient},
@@ -185,7 +187,7 @@ public:
   }
 
  public:
-  void configureTopics(const String& pubTopic, const String& subTopic) 
+  void configureTopics(const char* pubTopic, const char* subTopic) 
   {
     MqttSub<T>::setSubTopic(subTopic);
     MqttPub<T>::setPubTopic(pubTopic);

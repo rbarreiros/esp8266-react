@@ -3,15 +3,12 @@
 
 #include <Arduino.h>
 
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#endif
+#define MAX_STRING_LENGTH 256
 
 namespace SettingValue 
 {
-
-String format(String value);
-
+  extern const char* PLATFORM;
+  char* format(const char* value);
 };
 
-#endif  // end SettingValue
+#endif

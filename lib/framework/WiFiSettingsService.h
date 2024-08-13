@@ -24,13 +24,17 @@
 
 #define WIFI_RECONNECTION_DELAY 1000 * 30
 
+#define WIFI_SSID_SIZE 32
+#define WIFI_PASSWORD_SIZE 64
+#define WIFI_HOSTNAME_SIZE 64
+
 class WiFiSettings 
 {
 public:
   // core wifi configuration
-  String ssid;
-  String password;
-  String hostname;
+  char ssid[WIFI_SSID_SIZE];
+  char password[WIFI_PASSWORD_SIZE];
+  char hostname[WIFI_HOSTNAME_SIZE];
   bool staticIPConfig;
 
   // optional configuration for static IP address
@@ -58,9 +62,18 @@ public:
 
   static StateUpdateResult update(JsonObject& root, WiFiSettings& settings) 
   {
-    settings.ssid = root["ssid"] | FACTORY_WIFI_SSID;
-    settings.password = root["password"] | FACTORY_WIFI_PASSWORD;
-    settings.hostname = root["hostname"] | SettingValue::format(FACTORY_WIFI_HOSTNAME);
+    const char* ssid = root["ssid"] | FACTORY_WIFI_SSID;
+    strncpy(settings.ssid, ssid, WIFI_SSID_SIZE - 1);
+    settings.ssid[WIFI_SSID_SIZE - 1] = '\0';
+
+    const char* password = root["password"] | FACTORY_WIFI_PASSWORD;
+    strncpy(settings.password, password, WIFI_PASSWORD_SIZE - 1);
+    settings.password[WIFI_PASSWORD_SIZE - 1] = '\0';
+
+    const char* hostname = root["hostname"] | FACTORY_WIFI_HOSTNAME;
+    strncpy(settings.hostname, hostname, WIFI_HOSTNAME_SIZE - 1);
+    settings.hostname[WIFI_HOSTNAME_SIZE - 1] = '\0';
+
     settings.staticIPConfig = root["static_ip_config"] | false;
 
     // extended settings

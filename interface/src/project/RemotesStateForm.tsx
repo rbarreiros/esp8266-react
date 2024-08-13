@@ -1,5 +1,5 @@
 
-import { FC, useContext, useState, useEffect } from 'react';
+import { FC, useContext, useState, useEffect, useCallback } from 'react';
 
 import {
   Button, IconButton, Table, TableBody, TableCell, TableFooter, TableHead, TableRow
@@ -50,6 +50,7 @@ const RemotesStateForm: FC = () => {
   const [pairingError, setPairingError] = useState<string>();
   const [pairingSuccess, setPairingSuccess] = useState(false);
   const [remoteToDelete, setRemoteToDelete] = useState<Remote | null>(null);
+  const [highlightedRemote, setHighlightedRemote] = useState<string | null>(null);
 
   const authenticatedContext = useContext(AuthenticatedContext);
 
@@ -66,6 +67,45 @@ const RemotesStateForm: FC = () => {
     setPairingSuccess(false);
     loadData();
   };
+
+  const status = useCallback(() => {
+    if(wsData) {
+        const { remote_button, remote_serial, remote_description, remote_updated_at } = wsData;
+
+        if(remote_button && remote_button > 0 && remote_serial && remote_serial != "") {
+            return (
+                <div>
+                    <p><b>Button:</b> {remote_button} <b>Serial:</b> {remote_serial} <b>Description</b>: {remote_description}</p>
+                    <p>Updated At: {remote_updated_at}</p>
+                </div>
+            );
+        }
+    }
+    return null;
+  }, [wsData]);
+
+  useEffect(() => {
+    if (wsData && wsData.remote_button && wsData.remote_serial) {
+      const matchingRemote = data?.remotes.find(
+        //r => r.button === wsData.remote_button && r.serial === wsData.remote_serial
+        r => r.id === wsData.remote_id
+      );
+      if (matchingRemote) {
+        setHighlightedRemote(matchingRemote.id);
+        setTimeout(() => setHighlightedRemote(null), 1000);
+      }
+    }
+  }, [wsData, data]);
+
+  useEffect(() => {
+    if (wsData && !wsData.pairing) {
+      if (wsData.pairing_error) {
+        setPairingError(wsData.pairing_error);
+      } else {
+        setPairingSuccess(true);
+      }
+    }
+  }, [wsData]);
 
   const content = () => {
     if (!data) {
@@ -147,7 +187,13 @@ const RemotesStateForm: FC = () => {
           </TableHead>
           <TableBody>
             {data.remotes.sort(compareRemotes).map((r) => (
-              <TableRow key={r.description}>
+              <TableRow 
+                key={r.id}
+                style={{
+                    transition: 'background-color 1s',
+                    backgroundColor: highlightedRemote === r.id ? '#90EE90' : 'white'
+                  }}
+              >
                 <TableCell component="th" scope="row">
                   {r.description}
                 </TableCell>
@@ -216,24 +262,15 @@ const RemotesStateForm: FC = () => {
     );
   };
 
-  // Handle websocket updates
-  useEffect(() => {
-    if (wsData && !wsData.pairing) {
-      if (wsData.pairing_error) {
-        setPairingError(wsData.pairing_error);
-      } else {
-        setPairingSuccess(true);
-      }
-
-      console.log(wsData.remote_description);
-    }
-
-  }, [wsData]);
-
   return (
-    <SectionContent title='Manage Remotes' titleGutter>
-      {content()}
-    </SectionContent>
+    <>
+        <SectionContent title='Last remote received' titleGutter>
+            {status()}
+        </SectionContent>
+        <SectionContent title='Manage Remotes' titleGutter>
+            {content()}
+        </SectionContent>
+    </>
   );
 };
 

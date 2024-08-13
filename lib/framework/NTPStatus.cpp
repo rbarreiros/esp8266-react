@@ -13,27 +13,26 @@ NTPStatus::NTPStatus(AsyncWebServer* server, SecurityManager* securityManager)
  *
  * Uses a 25 byte buffer, large enough to fit an ISO time string with offset.
  */
-String formatTime(tm* time, const char* format) 
+size_t formatTime(tm* time, const char* format, char* out) 
 {
-  char time_string[25];
-  strftime(time_string, 25, format, time);
-  return String(time_string);
+  return strftime(out, 25, format, time);
 }
 
-String toUTCTimeString(tm* time) 
+size_t toUTCTimeString(tm* time, char* out) 
 {
-  return formatTime(time, "%FT%TZ");
+  return formatTime(time, "%FT%TZ", out);
 }
 
-String toLocalTimeString(tm* time) 
+size_t toLocalTimeString(tm* time, char* out) 
 {
-  return formatTime(time, "%FT%T");
+  return formatTime(time, "%FT%T", out);
 }
 
 void NTPStatus::ntpStatus(AsyncWebServerRequest* request) 
 {
   AsyncJsonResponse* response = new AsyncJsonResponse(false);
   JsonObject root = response->getRoot();
+  char buffer[30];
 
   // grab the current instant in unix seconds
   time_t now = time(nullptr);
@@ -42,10 +41,14 @@ void NTPStatus::ntpStatus(AsyncWebServerRequest* request)
   root["status"] = sntp_enabled() ? 1 : 0;
 
   // the current time in UTC
-  root["utc_time"] = toUTCTimeString(gmtime(&now));
+  size_t len = toUTCTimeString(gmtime(&now), buffer);
+  buffer[len] = '\0';
+  root["utc_time"] = buffer;
 
   // local time with offset
-  root["local_time"] = toLocalTimeString(localtime(&now));
+  len = toLocalTimeString(localtime(&now), buffer);
+  buffer[len] = '\0';
+  root["local_time"] = buffer;
 
   // the sntp server name
   root["server"] = sntp_getservername(0);

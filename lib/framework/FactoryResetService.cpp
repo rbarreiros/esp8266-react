@@ -31,6 +31,8 @@ void FactoryResetService::factoryReset()
   File root = fs->open(FS_CONFIG_DIRECTORY);
   File file;
   while (file = root.openNextFile()) {
+    // Should remove this even for ESP32 ? 
+    // To be decided....
     String path = file.path();
     file.close();
     fs->remove(path);
@@ -39,9 +41,10 @@ void FactoryResetService::factoryReset()
   Dir configDirectory = fs->openDir(FS_CONFIG_DIRECTORY);
   while (configDirectory.next()) 
   {
-    String path = FS_CONFIG_DIRECTORY;
-    path.concat("/");
-    path.concat(configDirectory.fileName());
+    int len = strlen(FS_CONFIG_DIRECTORY) + configDirectory.fileName().length() + 2;   
+    char path[len];
+
+    snprintf(path, len, "%s/%s", FS_CONFIG_DIRECTORY, configDirectory.fileName().c_str());
     fs->remove(path);
   }
 #endif

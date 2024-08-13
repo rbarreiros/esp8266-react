@@ -36,15 +36,18 @@ void AuthenticationService::signIn(AsyncWebServerRequest* request, JsonVariant& 
 {
   if (json.is<JsonObject>()) 
   {
-    String username = json["username"];
-    String password = json["password"];
-    Authentication authentication = _securityManager->authenticate(username, password);
+    Authentication authentication = 
+      _securityManager->authenticate(json["username"].as<const char*>(), json["password"].as<const char*>());
+
     if (authentication.authenticated) 
     {
       User* user = authentication.user;
       AsyncJsonResponse* response = new AsyncJsonResponse(false);
       JsonObject jsonObject = response->getRoot();
-      jsonObject["access_token"] = _securityManager->generateJWT(user);
+
+      char jwt[256] = {0};
+      _securityManager->generateJWT(user, jwt, sizeof(jwt));
+      jsonObject["access_token"] = jwt;
       response->setLength();
       request->send(response);
       return;

@@ -29,7 +29,7 @@ OTASettingsService::OTASettingsService(AsyncWebServer* server, FS* fs, SecurityM
     std::bind(&OTASettingsService::onStationModeGotIP, this, std::placeholders::_1)
   );
 #endif
-  addUpdateHandler([&](const String& originId) { configureArduinoOTA(); }, false);
+  addUpdateHandler([&](const char* originId) { configureArduinoOTA(); }, false);
 }
 
 void OTASettingsService::begin() 
@@ -60,7 +60,7 @@ void OTASettingsService::configureArduinoOTA()
     Serial.println(F("Starting OTA Update Service..."));
     _arduinoOTA = new ArduinoOTAClass;
     _arduinoOTA->setPort(_state.port);
-    _arduinoOTA->setPassword(_state.password.c_str());
+    _arduinoOTA->setPassword(_state.password);
     _arduinoOTA->onStart([]() { Serial.println(F("Starting")); });
     _arduinoOTA->onEnd([]() { Serial.println(F("\r\nEnd")); });
     _arduinoOTA->onProgress([](unsigned int progress, unsigned int total) {

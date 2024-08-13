@@ -12,27 +12,29 @@
 #include <bearssl/bearssl_hmac.h>
 #endif
 
+#define JWT_MAX_SIZE 128
+
 class ArduinoJsonJWT 
 {
  private:
-  String _secret;
+  char _secret[JWT_MAX_SIZE];
 
-  const String JWT_HEADER = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
-  const int JWT_HEADER_SIZE = JWT_HEADER.length();
+  const char* JWT_HEADER = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+  const int JWT_HEADER_SIZE = strlen(JWT_HEADER);
 
-  String sign(String& value);
+  size_t sign(const char* value, size_t len, char* outstring);
 
-  static String encode(const char* cstr, int len);
-  static String decode(String value);
+  static size_t encode(const char* cstr, size_t len, char* outstring);
+  static size_t decode(const char* cstr, size_t len, char* outstring);
 
  public:
-  ArduinoJsonJWT(String secret);
+  ArduinoJsonJWT(const char *secret);
 
-  void setSecret(String secret);
-  String getSecret();
+  void setSecret(const char* secret);
+  size_t getSecret(char* secret);
 
-  String buildJWT(JsonObject& payload);
-  void parseJWT(String jwt, JsonDocument& jsonDocument);
+  size_t buildJWT(JsonObject& payload, char* out, size_t len);
+  void parseJWT(const char* jwt, size_t len, JsonDocument& jsonDocument);
 };
 
 #endif

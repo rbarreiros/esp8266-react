@@ -58,7 +58,7 @@ GarageStateService::GarageStateService(AsyncWebServer* server,
     //m_garageMqttSettingsService->addUpdateHandler([&](const String& originId) { registerConfig(); }, false);
 
     // settings service update handler
-    addUpdateHandler([&](const String& originId) { onConfigUpdate(); }, false);
+    addUpdateHandler([&](const char* originId) { onConfigUpdate(); }, false);
 }
 
 void GarageStateService::begin()

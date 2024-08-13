@@ -44,20 +44,25 @@
 
 #define MQTT_RECONNECTION_DELAY 5000
 
+#define MQTT_HOST_SIZE      128
+#define MQTT_USERNAME_SIZE  64
+#define MQTT_PASSWORD_SIZE  64
+#define MQTT_CLIENTID_SIZE  128
+
 class MqttSettings 
 {
  public:
   // host and port - if enabled
   bool enabled;
-  String host;
+  char host[MQTT_HOST_SIZE];
   uint16_t port;
 
   // username and password
-  String username;
-  String password;
+  char username[MQTT_USERNAME_SIZE];
+  char password[MQTT_PASSWORD_SIZE];
 
   // client id settings
-  String clientId;
+  char clientId[MQTT_CLIENTID_SIZE];
 
   // connection settings
   uint16_t keepAlive;
@@ -78,13 +83,28 @@ class MqttSettings
   static StateUpdateResult update(JsonObject& root, MqttSettings& settings) 
   {
     settings.enabled = root["enabled"] | FACTORY_MQTT_ENABLED;
-    settings.host = root["host"] | FACTORY_MQTT_HOST;
+    
+    const char* host = root["host"] | FACTORY_MQTT_HOST;
+    strncpy(settings.host, host, MQTT_HOST_SIZE - 1);
+    settings.host[MQTT_HOST_SIZE - 1] = '\0';
+    
     settings.port = root["port"] | FACTORY_MQTT_PORT;
-    settings.username = root["username"] | SettingValue::format(FACTORY_MQTT_USERNAME);
-    settings.password = root["password"] | FACTORY_MQTT_PASSWORD;
-    settings.clientId = root["client_id"] | SettingValue::format(FACTORY_MQTT_CLIENT_ID);
+    
+    const char* username = root["username"] | FACTORY_MQTT_USERNAME;
+    strncpy(settings.username, username, MQTT_USERNAME_SIZE - 1);
+    settings.username[MQTT_USERNAME_SIZE - 1] = '\0';
+    
+    const char* password = root["password"] | FACTORY_MQTT_PASSWORD;
+    strncpy(settings.password, password, MQTT_PASSWORD_SIZE - 1);
+    settings.password[MQTT_PASSWORD_SIZE - 1] = '\0';
+    
+    const char* clientId = root["client_id"] | FACTORY_MQTT_CLIENT_ID;
+    strncpy(settings.clientId, clientId, MQTT_CLIENTID_SIZE - 1);
+    settings.clientId[MQTT_CLIENTID_SIZE - 1] = '\0';
+    
     settings.keepAlive = root["keep_alive"] | FACTORY_MQTT_KEEP_ALIVE;
     settings.cleanSession = root["clean_session"] | FACTORY_MQTT_CLEAN_SESSION;
+    
     return StateUpdateResult::CHANGED;
   }
 };

@@ -1,4 +1,5 @@
 #include <APStatus.h>
+#include <JsonUtils.h>
 
 APStatus::APStatus(AsyncWebServer* server, 
                    SecurityManager* securityManager, 
@@ -18,7 +19,7 @@ void APStatus::apStatus(AsyncWebServerRequest* request)
   JsonObject root = response->getRoot();
 
   root["status"] = _apSettingsService->getAPNetworkStatus();
-  root["ip_address"] = WiFi.softAPIP().toString();
+  JsonUtils::writeIP(root, "ip_address", WiFi.softAPIP());
   root["mac_address"] = WiFi.softAPmacAddress();
   root["station_num"] = WiFi.softAPgetStationNum();
 

@@ -54,7 +54,7 @@ MqttSettingsService::MqttSettingsService(AsyncWebServer* server, FS* fs, Securit
 #endif
   _mqttClient.onConnect(std::bind(&MqttSettingsService::onMqttConnect, this, std::placeholders::_1));
   _mqttClient.onDisconnect(std::bind(&MqttSettingsService::onMqttDisconnect, this, std::placeholders::_1));
-  addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
+  addUpdateHandler([&](const char* originId) { onConfigUpdated(); }, false);
 }
 
 MqttSettingsService::~MqttSettingsService() 
@@ -168,18 +168,18 @@ void MqttSettingsService::configureMqtt()
   if (_state.enabled && WiFi.isConnected()) 
   {
     Serial.println(F("Connecting to MQTT..."));
-    _mqttClient.setServer(retainCstr(_state.host.c_str(), &_retainedHost), _state.port);
-    if (_state.username.length() > 0) 
+    _mqttClient.setServer(retainCstr(_state.host, &_retainedHost), _state.port);
+    if (strlen(_state.username) > 0) 
     {
       _mqttClient.setCredentials(
-          retainCstr(_state.username.c_str(), &_retainedUsername),
-          retainCstr(_state.password.length() > 0 ? _state.password.c_str() : nullptr, &_retainedPassword));
+          retainCstr(_state.username, &_retainedUsername),
+          retainCstr(strlen(_state.password) > 0 ? _state.password : nullptr, &_retainedPassword));
     } 
     else 
     {
       _mqttClient.setCredentials(retainCstr(nullptr, &_retainedUsername), retainCstr(nullptr, &_retainedPassword));
     }
-    _mqttClient.setClientId(retainCstr(_state.clientId.c_str(), &_retainedClientId));
+    _mqttClient.setClientId(retainCstr(_state.clientId, &_retainedClientId));
     _mqttClient.setKeepAlive(_state.keepAlive);
     _mqttClient.setCleanSession(_state.cleanSession);
     _mqttClient.connect();

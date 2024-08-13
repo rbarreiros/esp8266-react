@@ -42,6 +42,10 @@
 
 #define ASSERT_OUTPUT_TO_SERIAL
 
+#ifdef assert
+#undef assert
+#endif
+
 #define assert(cond) { \
     if (!(cond)) { \
         rf433recv_assert_failed(__LINE__); \
@@ -62,10 +66,13 @@ static void rf433recv_assert_failed(unsigned int line) {
     // code), but I prefer to keep it out of symbols published by the lib...
 #define ARRAYSZ(a) (sizeof(a) / sizeof(*a))
 
+volatile static bool process_packet = false;
+
 #if defined(ESP8266)
 IRAM_ATTR
 #endif
 void handle_int_receive();
+void loop_handle_int_receive();
 
 
 // * **************** *********************************************************
@@ -361,6 +368,9 @@ short BitVector::cmp(const BitVector *p) const {
 // In this archive, the file
 //   test_compact.cpp
 // contains code to test compact/uncompact results, for a few numbers.
+#if defined(ESP8266)
+IRAM_ATTR
+#endif
 duration_t compact(uint16_t u) {
 #ifdef NO_COMPACT_DURATIONS
         // compact not activated -> compact() is a no-op
@@ -1106,8 +1116,13 @@ void RF_manager::wait_value_available() {
 }
 
 void RF_manager::do_events() {
-    bool has_waited_free_433 = false;
+    if(process_packet)
+    {
+        loop_handle_int_receive();
+        process_packet = false;
+    }
 
+    bool has_waited_free_433 = false;
     bool deja_vu = false;
     bool reactivate_interrupts_handler_in_the_end = false;
 
@@ -1857,17 +1872,21 @@ static sbuf_entry_t sbuf[BUFFER_SIGNALS_NB];
     // power of 2 that fits in a byte).
 static byte sbuf_read_head = 0;
 static byte sbuf_write_head = 0;
+volatile long intCounter = 0;
 
-#if defined(ESP8266)
-IRAM_ATTR
-#endif
-void handle_int_receive() {
+// We can't have this running while littlefs is accessing the filesystem
+// which is in the flash, and, esp8266 also runs code from flash, so in
+// a fs operation, if the int triggers, it'll get no instruction to execute
+// because a flash operation might be on the way and locking access.
+// This function can only set a variable, and process the packets in the loop.
+
+void loop_handle_int_receive() {
     static unsigned long last_t = 0;
 
     const unsigned long t = micros();
     unsigned long signal_duration = t - last_t;
     last_t = t;
-
+    intCounter++; // entered int
 #ifdef SIMULATE_INTERRUPTS
     if (timings_index < timings_len) {
         signal_duration = pgm_read_word(&timings[timings_index]);
@@ -1911,7 +1930,7 @@ void handle_int_receive() {
             compact_signal_duration =
                 sbuf[sbuf_read_head].compact_signal_duration;
 
-            sei();
+            //sei();
 
             Receiver *ptr_rec = RF_manager::get_head();
             while (ptr_rec) {
@@ -1924,10 +1943,10 @@ void handle_int_receive() {
                 ptr_rec = ptr_rec->get_next();
             }
 
-            cli();
+            //cli();
             sbuf_read_head = (sbuf_read_head + 1) & BUFFER_SIGNALS_MASK;
         }
-        sei();
+        //sei();
     }
 
 #ifdef DEBUG_EXEC_TIMES
@@ -1938,6 +1957,15 @@ void handle_int_receive() {
 #endif
 
     handle_int_busy = was_handle_int_busy;
+    intCounter--; // exited int
+}
+
+#if defined(ESP8266)
+IRAM_ATTR
+#endif
+void handle_int_receive()
+{
+    process_packet = true;
 }
 
 // vim: ts=4:sw=4:tw=80:et

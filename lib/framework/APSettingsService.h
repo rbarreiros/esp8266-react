@@ -55,14 +55,17 @@
 #define MANAGE_NETWORK_DELAY 10000
 #define DNS_PORT 53
 
+#define APSETTINGS_MAX_SSID_SIZE  32
+#define APSETTINGS_MAX_PASS_SIZE  64
+
 enum APNetworkStatus { ACTIVE = 0, INACTIVE, LINGERING };
 
 class APSettings 
 {
  public:
   uint8_t provisionMode;
-  String ssid;
-  String password;
+  char ssid[APSETTINGS_MAX_SSID_SIZE];
+  char password[APSETTINGS_MAX_PASS_SIZE];
   uint8_t channel;
   bool ssidHidden;
   uint8_t maxClients;
@@ -86,9 +89,9 @@ class APSettings
     root["channel"] = settings.channel;
     root["ssid_hidden"] = settings.ssidHidden;
     root["max_clients"] = settings.maxClients;
-    root["local_ip"] = settings.localIP.toString();
-    root["gateway_ip"] = settings.gatewayIP.toString();
-    root["subnet_mask"] = settings.subnetMask.toString();
+    JsonUtils::writeIP(root, "local_ip", settings.localIP);
+    JsonUtils::writeIP(root, "gateway_ip", settings.gatewayIP);
+    JsonUtils::writeIP(root, "subnet_mask", settings.subnetMask);
   }
 
   static StateUpdateResult update(JsonObject& root, APSettings& settings) 
@@ -106,8 +109,18 @@ class APSettings
         newSettings.provisionMode = AP_MODE_ALWAYS;
     };
 
-    newSettings.ssid = root["ssid"] | SettingValue::format(FACTORY_AP_SSID);
-    newSettings.password = root["password"] | FACTORY_AP_PASSWORD;
+    // THIS NEEDS FIXING, ELIMINATE ALL TRACES OF STRING
+    if(root["ssid"].as<const char*>())
+      strncpy(newSettings.ssid, root["ssid"].as<const char*>(), APSETTINGS_MAX_SSID_SIZE);
+    else
+      strncpy(newSettings.ssid, SettingValue::format(FACTORY_AP_SSID), APSETTINGS_MAX_SSID_SIZE); 
+      //strncpy(newSettings.ssid, SettingValue::format(FACTORY_AP_SSID), APSETTINGS_MAX_SSID_SIZE); TODO!!!!!!
+
+    if(root["password"].as<const char*>())
+      strncpy(newSettings.password, root["password"].as<const char*>(), APSETTINGS_MAX_PASS_SIZE);
+    else
+      strncpy(newSettings.password, FACTORY_AP_PASSWORD, APSETTINGS_MAX_PASS_SIZE);
+
     newSettings.channel = root["channel"] | FACTORY_AP_CHANNEL;
     newSettings.ssidHidden = root["ssid_hidden"] | FACTORY_AP_SSID_HIDDEN;
     newSettings.maxClients = root["max_clients"] | FACTORY_AP_MAX_CLIENTS;

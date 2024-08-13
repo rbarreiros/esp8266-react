@@ -9,6 +9,8 @@
 
 #define SERIAL_BAUD_RATE 115200
 
+extern volatile long intCounter;
+
 // Global Async Timer
 AsyncTimer  Timer;
 
@@ -30,7 +32,7 @@ RfRemoteController rfController;
 
 RemoteSettingsService remoteSettings = RemoteSettingsService(
   &server, esp8266React.getSecurityManager(), 
-  esp8266React.getFS(), &garageState, &rfController
+  esp8266React.getFS(), &garageState
 );
 
 RemoteStateService remoteState = RemoteStateService(
@@ -38,11 +40,14 @@ RemoteStateService remoteState = RemoteStateService(
   &rfController, &remoteSettings, &garageState
 );
 
-
 void setup() 
 {
   // start serial and filesystem
   Serial.begin(SERIAL_BAUD_RATE);
+
+  // setup rf controller
+  rfController.begin();
+  Serial.println(intCounter);
 
   // start the framework 
   esp8266React.begin();
@@ -60,14 +65,19 @@ void setup()
   remoteSettings.begin();
   remoteState.begin();
 
-  // setup rf controller
-  rfController.begin();
-
   // start the server
   server.begin();
 }
 
 void loop() {
+  static long lastCounter = 0;
+
+  if(intCounter != lastCounter)
+  {
+    Serial.println(intCounter);
+    lastCounter = intCounter;
+  }
+
   // Update global timer
   // triggers timer functions
   Timer.handle();

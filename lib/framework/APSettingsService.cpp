@@ -22,7 +22,7 @@ APSettingsService::APSettingsService(AsyncWebServer* server, FS* fs, SecurityMan
     _lastManaged{0},
     _reconfigureAp{false} 
 {
-  addUpdateHandler([&](const String& originId) { reconfigureAP(); }, false);
+  addUpdateHandler([&](const char* originId) { reconfigureAP(); }, false);
 }
 
 void APSettingsService::begin() 
@@ -76,7 +76,7 @@ void APSettingsService::startAP()
   
   WiFi.softAPConfig(_state.localIP, _state.gatewayIP, _state.subnetMask);
   
-  WiFi.softAP(_state.ssid.c_str(), _state.password.c_str(), 
+  WiFi.softAP(_state.ssid, _state.password, 
               _state.channel, _state.ssidHidden, _state.maxClients);
 
   if (!_dnsServer) 

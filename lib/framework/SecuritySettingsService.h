@@ -32,10 +32,14 @@
 
 #if FT_ENABLED(FT_SECURITY)
 
+#define JWT_SECRET_LENGTH 128
+#define USERNAME_LENGTH 32
+#define PASSWORD_LENGTH 64
+
 class SecuritySettings 
 {
 public:
-  String jwtSecret;
+  char jwtSecret[JWT_SECRET_LENGTH];
   std::list<User> users;
 
   static void read(SecuritySettings& settings, JsonObject& root) 
@@ -59,13 +63,18 @@ public:
   static StateUpdateResult update(JsonObject& root, SecuritySettings& settings) 
   {
     // secret
-    settings.jwtSecret = root["jwt_secret"] | SettingValue::format(FACTORY_JWT_SECRET);
+    const char* jwtSecret = root["jwt_secret"].as<const char*>();
+    if(!jwtSecret || strlen(jwtSecret) == 0)
+      jwtSecret = const_cast<const char*>(SettingValue::format(FACTORY_JWT_SECRET));
+
+    strncpy(settings.jwtSecret, jwtSecret, JWT_SECRET_LENGTH - 1);
+    settings.jwtSecret[JWT_SECRET_LENGTH - 1] = '\0';
 
     // users
     settings.users.clear();
     if (root["users"].is<JsonArray>()) {
       for (JsonVariant user : root["users"].as<JsonArray>()) {
-        settings.users.push_back(User(user["username"], user["password"], user["admin"]));
+        settings.users.push_back(User(user["username"].as<const char*>(), user["password"].as<const char*>(), user["admin"]));
       }
     } else {
       settings.users.push_back(User(FACTORY_ADMIN_USERNAME, FACTORY_ADMIN_PASSWORD, true));
@@ -83,9 +92,9 @@ public:
   void begin();
 
   // Functions to implement SecurityManager
-  Authentication authenticate(const String& username, const String& password);
+  Authentication authenticate(const char* username, const char* password);
   Authentication authenticateRequest(AsyncWebServerRequest* request);
-  String generateJWT(User* user);
+  void generateJWT(User* user, char* jwt, size_t len);
   ArRequestFilterFunction filterRequest(AuthenticationPredicate predicate);
   ArRequestHandlerFunction wrapRequest(ArRequestHandlerFunction onRequest, AuthenticationPredicate predicate);
   ArJsonRequestHandlerFunction wrapCallback(ArJsonRequestHandlerFunction callback, AuthenticationPredicate predicate);
@@ -100,7 +109,7 @@ public:
   /*
    * Lookup the user by JWT
    */
-  Authentication authenticateJWT(String& jwt);
+  Authentication authenticateJWT(const char* jwt);
 
   /*
    * Verify the payload is correct

@@ -47,7 +47,7 @@ NTPSettingsService::NTPSettingsService(AsyncWebServer* server, FS* fs, SecurityM
   );
 
 #endif
-  addUpdateHandler([&](const String& originId) { configureNTP(); }, false);
+  addUpdateHandler([&](const char* originId) { configureNTP(); }, false);
 }
 
 void NTPSettingsService::begin() 
@@ -85,16 +85,16 @@ void NTPSettingsService::configureNTP()
   if (WiFi.isConnected() && _state.enabled) {
     Serial.println(F("Starting NTP..."));
 #ifdef ESP32
-    configTzTime(_state.tzFormat.c_str(), _state.server.c_str());
+    configTzTime(_state.tzFormat, _state.server);
 #elif defined(ESP8266)
-    configTime(_state.tzFormat.c_str(), _state.server.c_str());
+    configTime(_state.tzFormat, _state.server);
 #endif
   } else {
 #ifdef ESP32
-    setenv("TZ", _state.tzFormat.c_str(), 1);
+    setenv("TZ", _state.tzFormat, 1);
     tzset();
 #elif defined(ESP8266)
-    setTZ(_state.tzFormat.c_str());
+    setTZ(_state.tzFormat);
 #endif
     sntp_stop();
   }
@@ -104,8 +104,9 @@ void NTPSettingsService::configureTime(AsyncWebServerRequest* request, JsonVaria
 {
   if (!sntp_enabled() && json.is<JsonObject>()) {
     struct tm tm = {0};
-    String timeLocal = json["local_time"];
-    char* s = strptime(timeLocal.c_str(), "%Y-%m-%dT%H:%M:%S", &tm);
+    const char* timeLocal = json["local_time"].as<const char*>();
+
+    char* s = strptime(timeLocal, "%Y-%m-%dT%H:%M:%S", &tm);
     if (s != nullptr) {
       time_t time = mktime(&tm);
       struct timeval now = {.tv_sec = time};

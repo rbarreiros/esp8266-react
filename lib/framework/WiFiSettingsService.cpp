@@ -44,7 +44,7 @@ WiFiSettingsService::WiFiSettingsService(AsyncWebServer* server, FS* fs, Securit
       std::bind(&WiFiSettingsService::onStationModeDisconnected, this, std::placeholders::_1));
 #endif
 
-  addUpdateHandler([&](const String& originId) { reconfigureWiFiConnection(); }, false);
+  addUpdateHandler([&](const char* originId) { reconfigureWiFiConnection(); }, false);
 }
 
 void WiFiSettingsService::begin() 
@@ -81,7 +81,7 @@ void WiFiSettingsService::loop()
 void WiFiSettingsService::manageSTA() 
 {
   // Abort if already connected, or if we have no SSID
-  if (WiFi.isConnected() || _state.ssid.length() == 0) {
+  if (WiFi.isConnected() || strlen(_state.ssid) == 0) {
     return;
   }
 
@@ -103,7 +103,7 @@ void WiFiSettingsService::manageSTA()
 #endif
     }
     // attempt to connect to the network
-    WiFi.begin(_state.ssid.c_str(), _state.password.c_str());
+    WiFi.begin(_state.ssid, _state.password);
   }
 }
 

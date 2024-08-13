@@ -25,7 +25,7 @@ GarageSettingsService::GarageSettingsService(AsyncWebServer *server,
     },
     m_garageStateService{garageStateService}
 {
-    addUpdateHandler([&](const String& originId) { onConfigUpdate(); });
+    addUpdateHandler([&](const char* originId) { onConfigUpdate(); });
 }
 
 void GarageSettingsService::begin()

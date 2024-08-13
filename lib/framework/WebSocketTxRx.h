@@ -67,9 +67,13 @@ protected:
                          uint8_t* data,
                          size_t len) = 0;
 
-  String clientId(AsyncWebSocketClient* client) 
+  char* clientId(AsyncWebSocketClient* client)
   {
-    return WEB_SOCKET_ORIGIN_CLIENT_ID_PREFIX + String(client->id());
+    static char buff[64];
+    size_t len = snprintf(buff, 64, "%s%d", WEB_SOCKET_ORIGIN_CLIENT_ID_PREFIX, client->id());
+    buff[len == 64 ? len - 1 : len] = '\0';
+
+    return buff;
   }
 
  private:
@@ -101,7 +105,7 @@ public:
       _stateReader{stateReader}
   {
     WebSocketConnector<T>::_statefulService->addUpdateHandler(
-        [&](const String& originId) { transmitData(nullptr, originId); }, false);
+        [&](const char* originId) { transmitData(nullptr, originId); }, false);
   }
 
   WebSocketTx(JsonStateReader<T> stateReader,
@@ -113,7 +117,7 @@ public:
       _stateReader{stateReader} 
   {
     WebSocketConnector<T>::_statefulService->addUpdateHandler(
-      [&](const String& originId) { transmitData(nullptr, originId); }, false);
+      [&](const char* originId) { transmitData(nullptr, originId); }, false);
   }
 
  protected:
@@ -155,12 +159,12 @@ public:
    * Original implementation sent clients their own IDs so they could ignore updates they initiated. This approach
    * simplifies the client and the server implementation but may not be sufficent for all use-cases.
    */
-  void transmitData(AsyncWebSocketClient* client, const String& originId) 
+  void transmitData(AsyncWebSocketClient* client, const char* originId) 
   {
     JsonDocument json;
     JsonObject root = json.to<JsonObject>();
     root["type"] = "payload";
-    root["origin_id"] = originId;
+    root["origin_id"] = const_cast<char*>(originId);
     //JsonObject payload = root.createNestedObject("payload");
     JsonObject payload = root["payload"].to<JsonObject>();
     WebSocketConnector<T>::_statefulService->read(payload, _stateReader);
