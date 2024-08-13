@@ -68,13 +68,15 @@ void setup()
 }
 
 void loop() {
+  // run rf loop function
+  // receives remote codes
+  //  this should really run very fast!!!
+  rfController.loop();
+
+
   // Update global timer
   // triggers timer functions
   Timer.handle();
-
-  // run rf loop function
-  // receives remote codes
-  rfController.loop();
 
   // run the framework's loop function
   esp8266React.loop();

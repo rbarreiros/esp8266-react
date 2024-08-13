@@ -62,11 +62,12 @@ static void rf433recv_assert_failed(unsigned int line) {
     // code), but I prefer to keep it out of symbols published by the lib...
 #define ARRAYSZ(a) (sizeof(a) / sizeof(*a))
 
+volatile static bool process_loop = false;
 #if defined(ESP8266)
 IRAM_ATTR
 #endif
 void handle_int_receive();
-
+void loop_handle_int_receive();
 
 // * **************** *********************************************************
 // * MeasureExecTimes *********************************************************
@@ -1106,8 +1107,13 @@ void RF_manager::wait_value_available() {
 }
 
 void RF_manager::do_events() {
-    bool has_waited_free_433 = false;
+    if(process_loop)
+    {
+        loop_handle_int_receive();
+        process_loop = false;
+    }
 
+    bool has_waited_free_433 = false;
     bool deja_vu = false;
     bool reactivate_interrupts_handler_in_the_end = false;
 
@@ -1862,6 +1868,10 @@ static byte sbuf_write_head = 0;
 IRAM_ATTR
 #endif
 void handle_int_receive() {
+    process_loop = true;
+}
+
+void loop_handle_int_receive() {
     static unsigned long last_t = 0;
 
     const unsigned long t = micros();
@@ -1911,7 +1921,7 @@ void handle_int_receive() {
             compact_signal_duration =
                 sbuf[sbuf_read_head].compact_signal_duration;
 
-            sei();
+            //sei();
 
             Receiver *ptr_rec = RF_manager::get_head();
             while (ptr_rec) {
@@ -1924,10 +1934,10 @@ void handle_int_receive() {
                 ptr_rec = ptr_rec->get_next();
             }
 
-            cli();
+            //cli();
             sbuf_read_head = (sbuf_read_head + 1) & BUFFER_SIGNALS_MASK;
         }
-        sei();
+        //sei();
     }
 
 #ifdef DEBUG_EXEC_TIMES
