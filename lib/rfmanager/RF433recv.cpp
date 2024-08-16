@@ -42,6 +42,10 @@
 
 #define ASSERT_OUTPUT_TO_SERIAL
 
+#ifdef assert
+#undef assert
+#endif
+
 #define assert(cond) { \
     if (!(cond)) { \
         rf433recv_assert_failed(__LINE__); \

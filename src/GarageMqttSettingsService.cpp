@@ -25,7 +25,7 @@ GarageMqttSettingsService::GarageMqttSettingsService(AsyncWebServer* server, FS*
         GarageMqttSettings::update,
         this,
         server,
-        GARAGE_SETTINGS_PATH,
+        GARAGE_MQTT_SETTINGS_PATH,
         securityManager,
         AuthenticationPredicates::IS_AUTHENTICATED
     },
@@ -35,7 +35,7 @@ GarageMqttSettingsService::GarageMqttSettingsService(AsyncWebServer* server, FS*
         GarageMqttSettings::update, 
         this, 
         fs, 
-        GARAGE_SETTINGS_FILE
+        GARAGE_MQTT_SETTINGS_FILE
     } 
 {}
 

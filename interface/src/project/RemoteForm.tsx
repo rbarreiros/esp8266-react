@@ -27,6 +27,7 @@ const RemoteForm: FC<RemoteFormProps> = ({ creating, validator, remote, setRemot
 
   useEffect(() => {
     if (open) {
+      console.log(remote.id);
       setFieldErrors(undefined);
     }
   }, [open]);

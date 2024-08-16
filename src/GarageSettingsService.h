@@ -13,6 +13,9 @@
 #define GARAGE_SETTINGS_FILE "/config/garageSettings.json"
 #define GARAGE_SETTINGS_ENDPOINT_PATH "/rest/garageSettings"
 
+// HA relay_on_timer as a number
+// HA relay_auto_off as a switch
+
 class GarageSettings
 {
 public:
@@ -47,7 +50,11 @@ public:
     }
 
     static void haRead(GarageSettings& settings, JsonObject& root)
-    {}
+    {
+        
+    }
+
+
     static StateUpdateResult haUpdate(JsonObject& root, GarageSettings& settings)
     {
         return StateUpdateResult::UNCHANGED;

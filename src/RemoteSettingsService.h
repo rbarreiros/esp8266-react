@@ -24,11 +24,59 @@ extern AsyncTimer Timer; // Global timer
 
 #define REMOTE_DEFAULT_PAIRING_TIMEOUT  60000 // 60 seconds, 1 minute
 
+// HA pairing_timeout as a number
+// HA remotes are remote entity
+
 struct Remote
 {
     uint8_t button;
-    char description[64]; // must be null terminated!
-    uint8_t serial[4];
+    String description; // must be null terminated!
+    RemoteSerial serial;
+
+    String id() {
+        static char buff[11];
+        snprintf(buff, 11, "%02X%02X%02X%02X%02X",
+            button, serial.ser[0], serial.ser[1], serial.ser[2], serial.ser[3]);
+
+        return String(buff);
+    }
+
+    Remote()
+        : button{0}, description{}, serial{0}
+    {}
+
+    Remote(uint8_t button, String description, RemoteSerial serial)
+        : button{button}, description{description}, serial{serial}
+    {}
+
+    bool isEqual(RemoteSerial ser)
+    {
+        return serial == ser;
+    }
+
+    void setSerial(RemoteSerial ser)
+    {
+        serial = ser;
+    }
+
+    void setSerial(String ser)
+    {
+        for(size_t i = 0, j = 0; i < ser.length(); i += 2, j++)
+        {
+            char hex[3] = {ser[i], ser[i+1], '\0'};
+            serial.ser[j] = (uint8_t)strtol(hex, NULL, 16);
+        }
+    }
+
+    String getSerial()
+    {
+        return serial.toString();
+    }
+
+    inline bool operator==(const Remote& other)
+    {
+        return (serial == other.serial) && (button == other.button);
+    }
 };
 
 using RemoteList = std::vector<Remote>;
@@ -44,12 +92,13 @@ public:
         root["pairing_timeout"] = settings.pairingTimeout;
 
         JsonArray remotes = root["remotes"].to<JsonArray>();
-        for(Remote rem : settings.remotes)
+        for(auto& rem : settings.remotes)
         {
             JsonObject r = remotes.add<JsonObject>();
+            r["id"] = rem.id();
             r["button"] = rem.button;
             r["description"] = rem.description;
-            r["serial"] = rem.serial;
+            r["serial"] = rem.serial.toString();
         }
     }
 
@@ -70,10 +119,42 @@ public:
         return changed;
     }
 
-    // Websocket
-    // Pairing
-    //static void wsRead(RemoteSettings& settings, JsonObject& root);
-    //static StateUpdateResult wsUpdate(JsonObject& root, RemoteSettings& settings);
+    // Writes to FS
+    static void readFs(RemoteSettings& settings, JsonObject& root)
+    {
+        root["pairing_timeout"] = settings.pairingTimeout;
+
+        JsonArray remotes = root["remotes"].to<JsonArray>();
+        for(Remote rem : settings.remotes)
+        {
+            JsonObject r = remotes.add<JsonObject>();
+            r["button"] = rem.button;
+            r["description"] = rem.description;
+            r["serial"] = rem.getSerial();
+        }
+    }
+
+    // Reads from FS
+    static StateUpdateResult updateFs(JsonObject& root, RemoteSettings& settings)
+    {
+        settings.pairingTimeout = root["pairing_timeout"] | REMOTE_DEFAULT_PAIRING_TIMEOUT;
+
+        settings.remotes.clear();
+        if(root["remotes"].is<JsonArray>())
+        {
+            for(JsonVariant rem : root["remotes"].as<JsonArray>())
+            {
+                Remote r;
+                r.button = rem["button"].as<uint8_t>();
+                r.description = rem["description"].as<String>();
+                r.setSerial(rem["serial"].as<String>());
+
+                settings.remotes.push_back(r);
+            }
+        }
+
+        return StateUpdateResult::UNCHANGED;
+    }
 
     // MQTT
 
@@ -103,6 +184,14 @@ public:
     RemoteList& getRemotes() { return _state.remotes; }
     String getDescription(RemotePacket packet, RemoteSerial serial);
     bool isValid(RemotePacket packet, RemoteSerial serial);
+    unsigned long getPairingTimeout() { return _state.pairingTimeout; }
+
+    bool addRemote(RemotePacket packet, RemoteSerial serial);
+    bool addRemote(RemotePacket packet, RemoteSerial serial, String description);
+    bool editRemote(String id, String description);
+    Remote getRemote(String id);
+    Remote getRemote(RemotePacket packet, RemoteSerial serial);
+    bool delRemote(String id);
 
 private:
     HttpEndpoint<RemoteSettings>    m_httpEndpoint;

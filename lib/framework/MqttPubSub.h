@@ -115,6 +115,7 @@ public:
 
   void setSubTopic(const String& subTopic) 
   {
+    Serial.printf("Attempting to set topic: %s\r\n", subTopic.c_str());
     if (!_subTopic.equals(subTopic)) 
     {
       // unsubscribe from the existing topic if one was set
@@ -123,6 +124,7 @@ public:
       }
       // set the new topic and re-configure the subscription
       _subTopic = subTopic;
+      Serial.printf("Setting subtopic %s - %p\r\n", _subTopic.c_str(), &_subTopic);
       subscribe();
     }
   }
@@ -140,7 +142,13 @@ public:
   void subscribe() 
   {
     if (_subTopic.length() > 0) {
-      MqttConnector<T>::_mqttClient->subscribe(_subTopic.c_str(), 2);
+      Serial.printf("Subscribing to topic %s\r\n", _subTopic.c_str());
+      if(MqttConnector<T>::_mqttClient->subscribe(_subTopic.c_str(), 2))
+        Serial.println("With success.");
+      else
+        Serial.println("With failure.");
+
+      Serial.printf("Subscribed to subtopic: %s <--- %p\r\n", _subTopic.c_str(), &_subTopic);
     }
   }
 
@@ -151,8 +159,10 @@ public:
                      size_t index, 
                      size_t total) 
   {
+    Serial.printf("Received mqtt message from %s with payload %s our subtopic is %s (%p)\r\n", topic, reinterpret_cast<const char*>(payload), _subTopic.c_str(), &_subTopic); 
     // we only care about the topic we are watching in this class
     if (strcmp(_subTopic.c_str(), topic)) {
+      Serial.printf("Not equal?!?! %s and %s\r\n", topic, _subTopic.c_str());
       return;
     }
 
@@ -162,6 +172,10 @@ public:
     if (!error && json.is<JsonObject>()) {
       JsonObject jsonObject = json.as<JsonObject>();
       MqttConnector<T>::_statefulService->update(jsonObject, _stateUpdater, MQTT_ORIGIN_ID);
+    }
+    else 
+    {
+      Serial.printf("Error deserealizing !?!?!?! %s \r\n", error.c_str());
     }
   }
 };

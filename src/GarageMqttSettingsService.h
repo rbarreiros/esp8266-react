@@ -5,8 +5,8 @@
 #include <StatefulService.h>
 #include <FSPersistence.h>
 
-#define GARAGE_SETTINGS_FILE "/config/brokerSettings.json"
-#define GARAGE_SETTINGS_PATH "/rest/brokerSettings"
+#define GARAGE_MQTT_SETTINGS_FILE "/config/brokerSettings.json"
+#define GARAGE_MQTT_SETTINGS_PATH "/rest/brokerSettings"
 
 class GarageMqttSettings
 {
