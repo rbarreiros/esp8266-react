@@ -12,7 +12,7 @@
 
 #define DEFAULT_RELAY_STATE false
 
-#define RELAY_PIN 5
+#define RELAY_PIN 16
 #define RELAY_ON HIGH
 #define RELAY_OFF LOW
 
@@ -133,7 +133,7 @@ class GarageStateService : public StatefulService<GarageState>
     espMqttClientAsync*         m_mqttClient;
     GarageMqttSettingsService*  m_garageMqttSettings;
     MqttPubSub<GarageState>     m_mqttRelayPubSub;
-    MqttPubSub<GarageState>     m_mqttStatusPubSub;
+    //MqttPubSub<GarageState>     m_mqttStatusPubSub;
     //MqttPubSub<GarageState>     m_mqttEndstopOpenPubSub;
     //MqttPubSub<GarageState>     m_mqttEndstopClosedPubSub;
 

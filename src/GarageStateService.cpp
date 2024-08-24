@@ -31,10 +31,10 @@ GarageStateService::GarageStateService(
       m_mqttClient{mqttClient},
       m_garageMqttSettings{garageMqttSettings},
       m_mqttRelayPubSub{GarageState::haRelayRead, GarageState::haRelayUpdate,
-                        this, m_mqttClient},
+                        this, m_mqttClient}
+    /*
       m_mqttStatusPubSub{GarageState::haStatusRead,
                          GarageState::haDummyUpdate, this, m_mqttClient}
-    /*
       m_mqttEndstopOpenPubSub{GarageState::haEndstopOpenRead,
                          GarageState::haDummyUpdate, this, m_mqttClient},
       m_mqttEndstopClosedPubSub{GarageState::haEndstopClosedRead,
@@ -115,9 +115,9 @@ void GarageStateService::registerConfig()
     json["pl_on"] = "{\"state\": \"" + String(ON_STATE) + "\"}";
     json["pl_off"] = "{\"state\": \"" + String(OFF_STATE) + "\"}";
 
-    configTopic = json["~"] + "/config";
-    subTopic = json["~"] + "/set";
-    pubTopic = json["~"] + "/state";
+    configTopic = json["~"].as<String>() + "/config";
+    subTopic = json["~"].as<String>() + "/set";
+    pubTopic = json["~"].as<String>() + "/state";
 
     // Publish Relay
     String payload;
@@ -128,7 +128,7 @@ void GarageStateService::registerConfig()
     m_mqttRelayPubSub.configureTopics(pubTopic, subTopic);
 
 
-    Serial.printf("Memory:  Relay %p   ---   State %p\r\n", &m_mqttRelayPubSub, &m_mqttStatusPubSub);
+    //Serial.printf("Memory:  Relay %p   ---   State %p\r\n", &m_mqttRelayPubSub, &m_mqttStatusPubSub);
 
     /*
     // Status now (sensor)

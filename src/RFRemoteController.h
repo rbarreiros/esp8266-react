@@ -2,13 +2,14 @@
 #define _RFREMOTECONTROLLER_H_
 
 #include <RF433recv.h>
+#include <vector>
 
 #define DEFAULT_RED_LED_STATE false
 #define RED_LED_PIN     16
 #define RED_LED_ON      LOW
 #define RED_LED_OFF     HIGH
 
-#define RF_PIN          15
+#define RF_PIN          13
 
 // Requires at least 3 receptions with the same code
 // to start validation. Should also check counter
