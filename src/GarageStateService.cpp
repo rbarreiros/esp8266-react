@@ -104,10 +104,6 @@ void GarageStateService::registerRelay()
     subTopic = json["~"].as<String>() + "/set";
     pubTopic = json["~"].as<String>() + "/state";
 
-    // Publish Relay
-
-    Serial.printf("Sending config to %s \r\n", configTopic.c_str());
-
     serializeJson(json, payload);
 
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
@@ -137,10 +133,6 @@ void GarageStateService::registerStatus()
     configTopic = json["~"].as<String>() + "/config";
     pubTopic = json["~"].as<String>() + "/state";
 
-    // Publish Status
-
-    Serial.printf("Sending config to %s \r\n", configTopic.c_str());
-
     serializeJson(json, payload);
 
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
@@ -165,10 +157,6 @@ void GarageStateService::registerEndstopOpen()
  
     configTopic = json["~"].as<String>() + "/config";
     pubTopic = json["~"].as<String>() + "/state";
-
-    // Publish Endstop Open
-
-    Serial.printf("Sending config to %s \r\n", configTopic.c_str());
 
     serializeJson(json, payload);
 
@@ -195,10 +183,6 @@ void GarageStateService::registerEndstopClosed()
     configTopic = json["~"].as<String>() + "/config";
     pubTopic = json["~"].as<String>() + "/state";
 
-    // Publish Endstop Open
-
-    Serial.printf("Sending config to %s \r\n", configTopic.c_str());
-
     serializeJson(json, payload);
 
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
@@ -224,10 +208,6 @@ void GarageStateService::registerBarrier()
     configTopic = json["~"].as<String>() + "/config";
     pubTopic = json["~"].as<String>() + "/state";
 
-    // Publish Endstop Open
-
-    Serial.printf("Sending config to %s \r\n", configTopic.c_str());
-
     serializeJson(json, payload);
 
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
@@ -237,8 +217,6 @@ void GarageStateService::registerBarrier()
 void GarageStateService::registerConfig()
 {
     if (!m_mqttClient->connected()) return;
-
-    Serial.println("Registering MQTT stuff");
 
     registerRelay();
     registerStatus();

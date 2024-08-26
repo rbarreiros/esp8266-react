@@ -14,7 +14,6 @@ const DemoProject: FC = () => {
     <>
       <RouterTabs value={routerTab}>
         <Tab value="socket" label="Garage door state" />
-        <Tab value="mqtt" label="MQTT Settings" />
       </RouterTabs>
       <Routes>
         <Route path="socket" element={<GarageStateSettingsForm />} />

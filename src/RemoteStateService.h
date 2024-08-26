@@ -48,7 +48,6 @@ public:
 
         if(state.isPairing != newPairing)
         {
-            Serial.println("Pairing now.");
             state.isPairing = newPairing;
             return StateUpdateResult::CHANGED;
         }
@@ -77,6 +76,30 @@ public:
         return StateUpdateResult::UNCHANGED;
     }
 
+    static void haPairingRead(RemoteState& settings, JsonObject& root)
+    {
+        root["state"] = settings.isPairing ? ON_STATE : OFF_STATE;
+    }
+
+    static StateUpdateResult haPairingUpdate(JsonObject& root, RemoteState& remoteState)
+    {
+        String state = root["state"];
+        bool newState = false;
+
+        if(state.equals(ON_STATE))
+            newState = true;
+        else if(!state.equals(OFF_STATE))
+            return StateUpdateResult::ERROR;
+
+
+        if(remoteState.isPairing != newState)
+        {
+            remoteState.isPairing = newState;
+            return StateUpdateResult::CHANGED;
+        }
+
+        return StateUpdateResult::UNCHANGED;
+    }
 };
 
 class RemoteStateService : public StatefulService<RemoteState>
@@ -97,11 +120,15 @@ private:
     RemoteSettingsService*      m_remoteSettings;
     GarageStateService*         m_garage;
     bool                        m_wasPairing;
+    MqttPubSub<RemoteState>     m_mqttPairingPubSub;
     MqttPubSub<RemoteState>     m_mqttRemotePubSub;
 
     void onRemoteReceived(RemotePacket packet, RemoteSerial serial);
     void onStateUpdate();
     void registerConfig();
+    void registerDeviceTrigger();
+    void registerPairingSwitch();
+    void getDevice(JsonObject& dev);
 };
 
 
