@@ -44,7 +44,6 @@ void SystemSettingsService::begin()
 
 void SystemSettingsService::loop()
 {
-    /* FIX
     if(_state.resetEnabled)
         processResetButton();
 
@@ -53,14 +52,13 @@ void SystemSettingsService::loop()
 
     if(m_toggleLed)
         toggleLed();
-    */
 }
 
 void SystemSettingsService::configureSystemSettings()
 {
     // configure pins
     if(_state.resetEnabled)
-        pinMode(_state.resetPin, FACTORY_SYSTEM_RESET_BUTTON_PULLUP ? INPUT_PULLUP : INPUT_PULLDOWN_16);
+        pinMode(_state.resetPin, FACTORY_SYSTEM_RESET_BUTTON_PULLUP ? INPUT_PULLUP : INPUT_PULLDOWN);
 
     if(_state.wifiLedEnabled)
     {

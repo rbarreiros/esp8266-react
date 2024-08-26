@@ -13,7 +13,7 @@ extern AsyncTimer Timer; // Global timer
 #include "RFRemoteController.h"
 #include "GarageStateService.h"
 
-#define REMOTE_SETTINGS_FILE            "config/remotes.json"
+#define REMOTE_SETTINGS_FILE            "/config/remotes.json"
 #define REMOTE_SETTINGS_ENDPOINT_PATH   "/rest/remoteSettings"
 #define REMOTE_SETTINGS_SOCKET_PATH     "/ws/remoteSettings"
 

@@ -125,4 +125,5 @@ void ESP8266React::loop() {
 #if FT_ENABLED(FT_MQTT)
   _mqttSettingsService.loop();
 #endif
+  _systemSettings.loop();
 }

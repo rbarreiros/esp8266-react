@@ -19,8 +19,7 @@ const String GarageState::m_statusString[5] = {
 
 GarageStateService::GarageStateService(
     AsyncWebServer* server, SecurityManager* securityManager,
-    espMqttClientAsync* mqttClient,
-    GarageMqttSettingsService* garageMqttSettings)
+    espMqttClientAsync* mqttClient)
     : m_webSocket{GarageState::read,
                   GarageState::update,
                   this,
@@ -29,25 +28,20 @@ GarageStateService::GarageStateService(
                   securityManager,
                   AuthenticationPredicates::IS_AUTHENTICATED},
       m_mqttClient{mqttClient},
-      m_garageMqttSettings{garageMqttSettings},
-      m_mqttRelayPubSub{GarageState::haRelayRead, GarageState::haRelayUpdate,
-                        this, m_mqttClient}
-    /*
-      m_mqttStatusPubSub{GarageState::haStatusRead,
-                         GarageState::haDummyUpdate, this, m_mqttClient}
+      m_mqttBarrierPubSub{GarageState::haBarrierTriggeredRead, 
+                        GarageState::haDummyUpdate, this, m_mqttClient},
+      m_mqttEndstopClosedPubSub{GarageState::haEndstopClosedRead,
+                         GarageState::haDummyUpdate, this, m_mqttClient},
       m_mqttEndstopOpenPubSub{GarageState::haEndstopOpenRead,
                          GarageState::haDummyUpdate, this, m_mqttClient},
-      m_mqttEndstopClosedPubSub{GarageState::haEndstopClosedRead,
-                         GarageState::haDummyUpdate, this, m_mqttClient}
-                         */
+      m_mqttStatusPubSub{GarageState::haStatusRead,
+                         GarageState::haDummyUpdate, this, m_mqttClient},
+      m_mqttRelayPubSub{GarageState::haRelayRead, GarageState::haRelayUpdate,
+                        this, m_mqttClient}
 {
     // Configure MQTT Callback
     m_mqttClient->onConnect(
         std::bind(&GarageStateService::registerConfig, this));
-
-    // Update handler on MQTT connection
-    m_garageMqttSettings->addUpdateHandler(
-        [&](const String& originId) { registerConfig(); }, false);
 
     // settings service update handler
     addUpdateHandler([&](const String& originId) { onConfigUpdate(); }, false);
@@ -62,6 +56,9 @@ void GarageStateService::begin()
     pinMode(ENDSTOP_CLOSED_PIN, INPUT);
     pinMode(ENDSTOP_OPEN_PIN, INPUT);
 
+    // Barrier
+    pinMode(BARRIER_PIN, INPUT);
+
     _state.relayOn = DEFAULT_RELAY_STATE;
 
     updateEndstops();
@@ -70,114 +67,184 @@ void GarageStateService::begin()
 
 void GarageStateService::loop() { updateEndstops(); }
 
-void GarageStateService::registerConfig()
+void GarageStateService::getDevice(JsonObject& dev)
 {
-    if (!m_mqttClient->connected()) return;
-
-    JsonDocument json;
-    String mqttPath;
-    String name;
-    String uniqueId;
-    String configTopic, subTopic, pubTopic;
-
-    //----- Entity
-    JsonObject dev = json["device"].to<JsonObject>();
     dev["ids"][0] = SettingValue::getUniqueId();
-    dev["name"] = "Buttler_Garage";  // Shouldn't be configurable ? header or web ?
+    dev["name"] = "Buttler Garage";  // Shouldn't be configurable ? header or web ?
     dev["sw"] = ESP.getSdkVersion();     // should be this firmware version, for
                                          // now will do.
     dev["mf"] = "Buttler Services LDA";  // jest, should be configurable ? :D
-    dev["mdl"] = "Garage_Remote_Manager";
+    dev["mdl"] = "Garage Remote Manager";
     dev["sn"] = dev["ids"][0];
     dev["cu"] = "http://" + WiFi.localIP().toString();  // we should check if it's connected.... no?
+}
 
-    // Get MQTT saved settings
-    // TODO
-    m_garageMqttSettings->read(
-        [&](GarageMqttSettings& settings)
-        {
-            mqttPath = settings.mqttPath;
-            name = settings.name;
-            uniqueId = settings.uniqueId;
-        });
+void GarageStateService::registerRelay()
+{
+    JsonDocument json;
+    String configTopic, subTopic, pubTopic, payload;
+    String uniqueId = SettingValue::getUniqueId();
 
-    // TEMP
-    uniqueId = SettingValue::getUniqueId();
+    //----- Entity
+    JsonObject dev = json["device"].to<JsonObject>();
+    getDevice(dev);
 
-    // Relay (switch)
     json["~"] = "homeassistant/switch/garage_door_" + uniqueId;
-    json["name"] = "garage_door_" + uniqueId;
-    json["uniq_id"] = "buttler_" + uniqueId;
+    json["name"] = "Garage Door";
+    json["uniq_id"] = "buttler_door_" + uniqueId;
     json["cmd_t"] = "~/set";
     json["stat_t"] = "~/state";
-    json["schema"] = "json";
     json["val_tpl"] = "{{ value_json.state }}";
     json["pl_on"] = "{\"state\": \"" + String(ON_STATE) + "\"}";
     json["pl_off"] = "{\"state\": \"" + String(OFF_STATE) + "\"}";
+    json["stat_on"] = String(ON_STATE);
+    json["stat_off"] = String(OFF_STATE);
 
     configTopic = json["~"].as<String>() + "/config";
     subTopic = json["~"].as<String>() + "/set";
     pubTopic = json["~"].as<String>() + "/state";
 
     // Publish Relay
-    String payload;
+
     Serial.printf("Sending config to %s \r\n", configTopic.c_str());
+
     serializeJson(json, payload);
+
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
-    
     m_mqttRelayPubSub.configureTopics(pubTopic, subTopic);
+}
 
+void GarageStateService::registerStatus()
+{
+    JsonDocument json;
+    String configTopic, pubTopic, payload;
+    String uniqueId = SettingValue::getUniqueId();
 
-    //Serial.printf("Memory:  Relay %p   ---   State %p\r\n", &m_mqttRelayPubSub, &m_mqttStatusPubSub);
+    //----- Entity
+    JsonObject dev = json["device"].to<JsonObject>();
+    getDevice(dev);
 
-    /*
-    // Status now (sensor)
     json["~"] = "homeassistant/sensor/garage_status_" + uniqueId;
-    json["name"] = "garage_status_" + uniqueId;
-    json.remove("cmd_t");
+    json["name"] = "Garage Door Status";
+    json["uniq_id"] = "buttler_status_" + uniqueId;
+    json["stat_t"] = "~/state";
+    json["val_tpl"] = "{{ value_json.state }}";
     json["device_class"] = "enum";
 
     for(uint8_t i = 0; i < 5; i++)
         json["options"][i] = GarageState::m_statusString[i];
 
-    configTopic = json["~"] + "/config";
-    subTopic.clear();
-    pubTopic = json["~"] + "/state";
+    configTopic = json["~"].as<String>() + "/config";
+    pubTopic = json["~"].as<String>() + "/state";
 
-    // publish Status
+    // Publish Status
+
     Serial.printf("Sending config to %s \r\n", configTopic.c_str());
+
     serializeJson(json, payload);
+
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
-    m_mqttStatusPubSub.configureTopics(pubTopic, subTopic);
+    m_mqttStatusPubSub.configureTopics(pubTopic, "");
+}
 
-    // Endstops (Sensor)
-    json["~"] = "homeassistant/binary_sensor/garage_endstop_open_" + uniqueId;
-    json["name"] = "garage_endstop_open_" + uniqueId;
-    json.remove("device_class");
-    json.remove("options");
+void GarageStateService::registerEndstopOpen()
+{
+    JsonDocument json;
+    String configTopic, pubTopic, payload;
+    String uniqueId = SettingValue::getUniqueId();
 
-    configTopic = json["~"] + "/config";
-    pubTopic = json["~"] + "/state";
+    //----- Entity
+    JsonObject dev = json["device"].to<JsonObject>();
+    getDevice(dev);
 
-    // publish Endstop Open
+    json["~"] = "homeassistant/sensor/garage_endstop_open_" + uniqueId;
+    json["name"] = "Garage Door Open Endstop";
+    json["uniq_id"] = "buttler_endstop_open_" + uniqueId;
+    json["val_tpl"] = "{{ value_json.state }}";
+    json["stat_t"] = "~/state";
+ 
+    configTopic = json["~"].as<String>() + "/config";
+    pubTopic = json["~"].as<String>() + "/state";
+
+    // Publish Endstop Open
+
     Serial.printf("Sending config to %s \r\n", configTopic.c_str());
+
     serializeJson(json, payload);
+
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
-    m_mqttEndstopOpenPubSub.configureTopics(pubTopic, subTopic);
+    m_mqttEndstopOpenPubSub.configureTopics(pubTopic, "");
+}
 
-    // Endstops (Sensor)
-    json["~"] = "homeassistant/binary_sensor/garage_endstop_closed_" + uniqueId;
-    json["name"] = "garage_endstop_closed_" + uniqueId;
+void GarageStateService::registerEndstopClosed()
+{
+    JsonDocument json;
+    String configTopic, pubTopic, payload;
+    String uniqueId = SettingValue::getUniqueId();
 
-    configTopic = json["~"] + "/config";
-    pubTopic = json["~"] + "/state";
+    //----- Entity
+    JsonObject dev = json["device"].to<JsonObject>();
+    getDevice(dev);
 
-    // publish Endstop Closed
+    json["~"] = "homeassistant/sensor/garage_endstop_closed_" + uniqueId;
+    json["name"] = "Garage Door Closed Endstop";
+    json["uniq_id"] = "buttler_endstop_closed_" + uniqueId;
+    json["val_tpl"] = "{{ value_json.state }}";
+    json["stat_t"] = "~/state";
+ 
+    configTopic = json["~"].as<String>() + "/config";
+    pubTopic = json["~"].as<String>() + "/state";
+
+    // Publish Endstop Open
+
     Serial.printf("Sending config to %s \r\n", configTopic.c_str());
+
     serializeJson(json, payload);
+
     m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
-    m_mqttEndstopClosedPubSub.configureTopics(pubTopic, subTopic);
-    */
+    m_mqttEndstopClosedPubSub.configureTopics(pubTopic, "");
+}
+
+void GarageStateService::registerBarrier()
+{
+    JsonDocument json;
+    String configTopic, pubTopic, payload;
+    String uniqueId = SettingValue::getUniqueId();
+
+    //----- Entity
+    JsonObject dev = json["device"].to<JsonObject>();
+    getDevice(dev);
+
+    json["~"] = "homeassistant/sensor/garage_barrier_" + uniqueId;
+    json["name"] = "Garage Door Barrier";
+    json["uniq_id"] = "buttler_barrier_" + uniqueId;
+    json["val_tpl"] = "{{ value_json.state }}";
+    json["stat_t"] = "~/state";
+ 
+    configTopic = json["~"].as<String>() + "/config";
+    pubTopic = json["~"].as<String>() + "/state";
+
+    // Publish Endstop Open
+
+    Serial.printf("Sending config to %s \r\n", configTopic.c_str());
+
+    serializeJson(json, payload);
+
+    m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
+    m_mqttBarrierPubSub.configureTopics(pubTopic, "");
+}
+
+void GarageStateService::registerConfig()
+{
+    if (!m_mqttClient->connected()) return;
+
+    Serial.println("Registering MQTT stuff");
+
+    registerRelay();
+    registerStatus();
+    registerEndstopOpen();
+    registerEndstopClosed();
+    registerBarrier();
 }
 
 void GarageStateService::onConfigUpdate()
@@ -206,6 +273,7 @@ void GarageStateService::updateEndstops()
     // check current endstop status
     _state.endstopOpen = digitalRead(ENDSTOP_OPEN_PIN) == ENDSTOP_OPEN_ON;
     _state.endstopClosed = digitalRead(ENDSTOP_CLOSED_PIN) == ENDSTOP_CLOSED_ON;
+    _state.barrierTriggered = digitalRead(BARRIER_PIN) == BARRIER_ON;
 
     // Error, should never happen....
     if (_state.endstopOpen && _state.endstopClosed)
@@ -246,6 +314,7 @@ void GarageStateService::updateEndstops()
                 state.status = m_lastEsState;
                 state.endstopOpen = _state.endstopOpen;
                 state.endstopClosed = _state.endstopClosed;
+                state.barrierTriggered = _state.barrierTriggered;
                 return StateUpdateResult::CHANGED;
             },
             "stateservice");

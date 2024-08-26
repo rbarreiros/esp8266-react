@@ -5,7 +5,6 @@ import { Tab } from '@mui/material';
 import { RouterTabs, useRouterTab, useLayoutTitle } from '../components';
 
 import RemotesStateForm from './RemotesStateForm';
-import RemotesMqttSettingsForm from './RemotesMqttSettingsForm';
 
 const DemoProject: FC = () => {
   useLayoutTitle("Remotes");
@@ -19,7 +18,6 @@ const DemoProject: FC = () => {
       </RouterTabs>
       <Routes>
         <Route path="remotes" element={<RemotesStateForm />} />
-        <Route path="remote_settings" element={<RemotesMqttSettingsForm />} />
         <Route path="/*" element={<Navigate replace to="remotes" />} />
       </Routes>
     </>

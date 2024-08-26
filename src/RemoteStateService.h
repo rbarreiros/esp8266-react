@@ -3,6 +3,8 @@
 
 #include <StatefulService.h>
 #include <WebSocketTxRx.h>
+#include <MqttPubSub.h>
+#include <espMqttClientAsync.h>
 
 #if FT_ENABLED(FT_NTP)
 #include <time.h>
@@ -55,7 +57,20 @@ public:
     }
 
     static void haRead(RemoteState& settings, JsonObject& root)
-    {}
+    {
+        root["remote_button"] = settings.rem.button;
+        root["remote_serial"] = settings.rem.getSerial();
+        root["remote_description"] = settings.rem.description;
+        root["remote_is_paired"] = settings.isValid;
+        
+#if FT_ENABLED(FT_NTP)
+        time_t now = time(nullptr);
+        root["remote_updated_at"] = formatTime(localtime(&now), "%FT%T");
+#else
+        // TODO
+        root["remote_updated_at"] = millis();
+#endif
+    }
 
     static StateUpdateResult haUpdate(JsonObject& root, RemoteState& state)
     {
@@ -68,21 +83,25 @@ class RemoteStateService : public StatefulService<RemoteState>
 {
 public:
     RemoteStateService(AsyncWebServer* server, 
-                        SecurityManager* security, 
+                        SecurityManager* security,
+                        espMqttClientAsync* mqttClient, 
                         RfRemoteController* rfctrl,
                         RemoteSettingsService* remoteSettings,
                         GarageStateService* garageService);
     void begin();
 
 private:
+    espMqttClientAsync*         m_mqttClient;
     WebSocketTxRx<RemoteState>  m_websocket;
     RfRemoteController*         m_rfctrl;
     RemoteSettingsService*      m_remoteSettings;
     GarageStateService*         m_garage;
     bool                        m_wasPairing;
+    MqttPubSub<RemoteState>     m_mqttRemotePubSub;
 
     void onRemoteReceived(RemotePacket packet, RemoteSerial serial);
     void onStateUpdate();
+    void registerConfig();
 };
 
 

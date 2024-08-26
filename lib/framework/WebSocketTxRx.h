@@ -1,6 +1,7 @@
 #ifndef WebSocketTxRx_h
 #define WebSocketTxRx_h
 
+#include <memory>
 #include <StatefulService.h>
 #include <ESPAsyncWebServer.h>
 #include <SecurityManager.h>
@@ -16,7 +17,7 @@ class WebSocketConnector
 protected:
   StatefulService<T>* _statefulService;
   AsyncWebServer* _server;
-  AsyncWebSocket _webSocket;
+  std::unique_ptr<AsyncWebSocket> _webSocket;
 
   WebSocketConnector(StatefulService<T>* statefulService,
                      AsyncWebServer* server,
@@ -26,10 +27,10 @@ protected:
     :
       _statefulService{statefulService}, 
       _server{server}, 
-      _webSocket{webSocketPath}
+      _webSocket{new AsyncWebSocket(webSocketPath)}
   {
-    _webSocket.setFilter(securityManager->filterRequest(authenticationPredicate));
-    _webSocket.onEvent(std::bind(&WebSocketConnector::onWSEvent,
+    _webSocket->setFilter(securityManager->filterRequest(authenticationPredicate));
+    _webSocket->onEvent(std::bind(&WebSocketConnector::onWSEvent,
                                  this,
                                  std::placeholders::_1,
                                  std::placeholders::_2,
@@ -37,7 +38,7 @@ protected:
                                  std::placeholders::_4,
                                  std::placeholders::_5,
                                  std::placeholders::_6));
-    _server->addHandler(&_webSocket);
+    _server->addHandler(_webSocket.get());
     _server->on(webSocketPath, HTTP_GET, std::bind(&WebSocketConnector::forbidden, this, std::placeholders::_1));
   }
 
@@ -47,9 +48,9 @@ protected:
     :
       _statefulService{statefulService}, 
       _server{server}, 
-      _webSocket{webSocketPath}
+      _webSocket{new AsyncWebSocket(webSocketPath)}
   {
-    _webSocket.onEvent(std::bind(&WebSocketConnector::onWSEvent,
+    _webSocket->onEvent(std::bind(&WebSocketConnector::onWSEvent,
                                  this,
                                  std::placeholders::_1,
                                  std::placeholders::_2,
@@ -57,7 +58,7 @@ protected:
                                  std::placeholders::_4,
                                  std::placeholders::_5,
                                  std::placeholders::_6));
-    _server->addHandler(&_webSocket);
+    _server->addHandler(_webSocket.get());
   }
 
   virtual void onWSEvent(AsyncWebSocket* server,
@@ -141,9 +142,9 @@ public:
     root["type"] = "id";
     root["id"] = WebSocketConnector<T>::clientId(client);
     size_t len = measureJson(json);
-    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket.makeBuffer(len);
+    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket->makeBuffer(len);
     if (buffer) {
-      serializeJson(json, (char*)buffer->get(), len + 1);
+      serializeJson(json, buffer->get(), len);
       client->text(buffer);
     }
   }
@@ -166,13 +167,13 @@ public:
     WebSocketConnector<T>::_statefulService->read(payload, _stateReader);
 
     size_t len = measureJson(json);
-    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket.makeBuffer(len);
+    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket->makeBuffer(len);
     if (buffer) {
-      serializeJson(json, (char*)buffer->get(), len + 1);
+      serializeJson(json, buffer->get(), len);
       if (client) {
         client->text(buffer);
       } else {
-        WebSocketConnector<T>::_webSocket.textAll(buffer);
+        WebSocketConnector<T>::_webSocket->textAll(buffer);
       }
     }
   }

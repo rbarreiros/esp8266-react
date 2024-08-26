@@ -1,7 +1,6 @@
 #include <AsyncTimer.h>
 #include <ESP8266React.h>
 
-#include "GarageMqttSettingsService.h"
 #include "GarageSettingsService.h"
 #include "GarageStateService.h"
 #include "RFRemoteController.h"
@@ -16,13 +15,9 @@ AsyncTimer Timer;
 AsyncWebServer server(80);
 ESP8266React esp8266React(&server);
 
-// Gate control
-GarageMqttSettingsService garageMqttSettings = GarageMqttSettingsService(
-    &server, esp8266React.getFS(), esp8266React.getSecurityManager());
-
 GarageStateService garageState =
     GarageStateService(&server, esp8266React.getSecurityManager(),
-                       esp8266React.getMqttClient(), &garageMqttSettings);
+                       esp8266React.getMqttClient());
 
 GarageSettingsService garageSettings =
     GarageSettingsService(&server, esp8266React.getSecurityManager(),
@@ -37,6 +32,7 @@ RemoteSettingsService remoteSettings =
 
 RemoteStateService remoteState =
     RemoteStateService(&server, esp8266React.getSecurityManager(),
+                        esp8266React.getMqttClient(),
                        &rfController, &remoteSettings, &garageState);
 
 void setup()

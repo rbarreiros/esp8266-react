@@ -14,7 +14,7 @@ export const OTA_SETTINGS_VALIDATOR = new Schema({
 export const SYSTEM_SETTINGS_VALIDATOR = new Schema({
   reset_pin: [
     { required: true, message: "Reset pin is required" },
-    { type: "number", min: 1, max: 50, message: "Pin must be between 1 and 50" }
+    { type: "number", min: 0, max: 50, message: "Pin must be between 0 and 50" }
   ],
 
 });

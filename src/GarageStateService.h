@@ -4,7 +4,6 @@
 #include <MqttPubSub.h>
 #include <StatefulService.h>
 #include <WebSocketTxRx.h>
-#include <GarageMqttSettingsService.h>
 
 #include "RFRemoteController.h"
 
@@ -28,6 +27,10 @@
 #define ENDSTOP_OPEN_PIN 2
 #define ENDSTOP_OPEN_ON LOW
 #define ENDSTOP_OPEN_OFF HIGH
+
+#define BARRIER_PIN 17
+#define BARRIER_ON LOW
+#define BARRIER_OFF HIGH
 
 // HA relay as a switch
 // HA status as sensor
@@ -54,12 +57,14 @@ class GarageState
     GarageStatus_t status = STATUS_ERROR;  // current status of garage door
     bool endstopClosed = false;            // status of close endstop
     bool endstopOpen = false;              // status of open endstop
+    bool barrierTriggered = false;          // status of IR barrier
 
     static void read(GarageState& settings, JsonObject& root)
     {
         root["relay_on"] = settings.relayOn;
         root["endstop_closed"] = settings.endstopClosed;
         root["endstop_open"] = settings.endstopOpen;
+        root["barrier_triggered"] = settings.barrierTriggered;
         root["status"] = settings.status;
     }
 
@@ -86,10 +91,23 @@ class GarageState
     }
 
     static StateUpdateResult haRelayUpdate(JsonObject& root,
-                                      GarageState& GarageState)
+                                      GarageState& garageState)
     {
-        serializeJson(root, Serial);
-        Serial.println("Got HA Update");
+        String state = root["state"];
+        bool newState = false;
+
+        if(state.equals(ON_STATE))
+            newState = true;
+        else if(!state.equals(OFF_STATE))
+            return StateUpdateResult::ERROR;
+
+
+        if(garageState.relayOn != newState)
+        {
+            garageState.relayOn = newState;
+            return StateUpdateResult::CHANGED;
+        }
+
         return StateUpdateResult::UNCHANGED;
     }
 
@@ -108,6 +126,11 @@ class GarageState
         root["state"] = settings.endstopClosed ? ON_STATE : OFF_STATE;
     }
 
+    static void haBarrierTriggeredRead(GarageState& settings, JsonObject& root)
+    {
+        root["state"] = settings.barrierTriggered ? ON_STATE : OFF_STATE;
+    }
+
     static StateUpdateResult haDummyUpdate(JsonObject& root,
                                       GarageState& GarageState)
     {
@@ -119,7 +142,7 @@ class GarageStateService : public StatefulService<GarageState>
 {
    public:
     GarageStateService(AsyncWebServer* server, SecurityManager* securityManager,
-                       espMqttClientAsync* mqttClient, GarageMqttSettingsService* garageMqttSettings);
+                       espMqttClientAsync* mqttClient);
     void begin();
     void loop();
 
@@ -131,11 +154,11 @@ class GarageStateService : public StatefulService<GarageState>
    private:
     WebSocketTxRx<GarageState>  m_webSocket;
     espMqttClientAsync*         m_mqttClient;
-    GarageMqttSettingsService*  m_garageMqttSettings;
+    MqttPubSub<GarageState>     m_mqttBarrierPubSub;
+    MqttPubSub<GarageState>     m_mqttEndstopClosedPubSub;
+    MqttPubSub<GarageState>     m_mqttEndstopOpenPubSub;
+    MqttPubSub<GarageState>     m_mqttStatusPubSub;
     MqttPubSub<GarageState>     m_mqttRelayPubSub;
-    //MqttPubSub<GarageState>     m_mqttStatusPubSub;
-    //MqttPubSub<GarageState>     m_mqttEndstopOpenPubSub;
-    //MqttPubSub<GarageState>     m_mqttEndstopClosedPubSub;
 
     GarageState::GarageStatus_t m_lastEsState = GarageState::STATUS_ERROR;
     bool m_relayAutoOff;
@@ -144,6 +167,14 @@ class GarageStateService : public StatefulService<GarageState>
     void registerConfig();
     void onConfigUpdate();
     void updateEndstops();
+
+
+    void getDevice(JsonObject& dev);
+    void registerRelay();
+    void registerStatus();
+    void registerEndstopOpen();
+    void registerEndstopClosed();
+    void registerBarrier();
 };
 
 #endif

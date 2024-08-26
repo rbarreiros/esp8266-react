@@ -5,7 +5,6 @@ import { Tab } from '@mui/material';
 import { RouterTabs, useRouterTab, useLayoutTitle } from '../components';
 
 import GarageStateSettingsForm from './GarageStateSettingsForm';
-import GarageMqttSettingsForm from './GarageMqttSettingsForm';
 
 const DemoProject: FC = () => {
   useLayoutTitle("Garage Project");
@@ -19,7 +18,6 @@ const DemoProject: FC = () => {
       </RouterTabs>
       <Routes>
         <Route path="socket" element={<GarageStateSettingsForm />} />
-        <Route path="mqtt" element={<GarageMqttSettingsForm />} />
         <Route path="/*" element={<Navigate replace to="socket" />} />
       </Routes>
     </>
