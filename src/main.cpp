@@ -9,6 +9,9 @@
 
 #define SERIAL_BAUD_RATE 115200
 
+TaskHandle_t rfTask;
+TaskHandle_t espTask;
+
 // Global Async Timer
 AsyncTimer Timer;
 
@@ -34,6 +37,26 @@ RemoteStateService remoteState =
     RemoteStateService(&server, esp8266React.getSecurityManager(),
                         esp8266React.getMqttClient(),
                        &rfController, &remoteSettings, &garageState);
+
+void RfControllerTask(void* param)
+{
+    RfRemoteController *rf = static_cast<RfRemoteController*>(param);
+
+    for(;;)
+    {
+        rf->loop();
+    }
+}
+
+void esp8266ReactTask(void *param)
+{
+    ESP8266React *esp = static_cast<ESP8266React*>(param);
+    for(;;)
+    {
+        esp->loop();
+    }
+}
+
 
 void setup()
 {
@@ -61,6 +84,13 @@ void setup()
 
     // start the server
     server.begin();
+
+
+    // start RF Controller task
+    //xTaskCreatePinnedToCore(RfControllerTask, "RFController", 5000, &rfController, 0, &rfTask, 0);
+
+    // ESP web stuff into its own core
+    //xTaskCreatePinnedToCore(esp8266ReactTask, "ESP8266Task", 50000, &esp8266React, 0, &espTask, 0);
 }
 
 void loop()
