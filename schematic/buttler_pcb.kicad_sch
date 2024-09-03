@@ -2430,23 +2430,23 @@
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
-			(property "Reference" "RF"
-				(at -4.064 7.366 0)
+			(property "Reference" "RF1"
+				(at 0 8.8815 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" ""
-				(at 0 0 0)
+			(property "Value" "~"
+				(at 0 7.2001 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Footprint" ""
+			(property "Footprint" "buttler:RXB12"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2523,7 +2523,7 @@
 						)
 					)
 				)
-				(pin output line
+				(pin power_in line
 					(at -7.62 3.81 0)
 					(length 2.54)
 					(name "VCC"
@@ -2541,7 +2541,7 @@
 						)
 					)
 				)
-				(pin output line
+				(pin bidirectional line
 					(at -7.62 1.27 0)
 					(length 2.54)
 					(name "Data"
@@ -2559,7 +2559,7 @@
 						)
 					)
 				)
-				(pin output line
+				(pin bidirectional line
 					(at -7.62 -1.27 0)
 					(length 2.54)
 					(name "Data"
@@ -2577,7 +2577,7 @@
 						)
 					)
 				)
-				(pin output line
+				(pin power_in line
 					(at -7.62 -3.81 0)
 					(length 2.54)
 					(name "GND"
@@ -4025,6 +4025,16 @@
 			(type default)
 		)
 		(uuid "b8e881dc-0919-4fa1-b76d-5816becb52b7")
+	)
+	(wire
+		(pts
+			(xy 53.34 25.4) (xy 53.34 26.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c950e5b9-34ec-4599-900d-64600cf8ce49")
 	)
 	(wire
 		(pts
@@ -5678,7 +5688,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_SO:SOP-4_3.8x4.1mm_P2.54mm"
+		(property "Footprint" "schematic:OPTO-SMD4"
 			(at 114.3 59.69 0)
 			(effects
 				(font
@@ -5724,6 +5734,72 @@
 			(project "buttler_pcb"
 				(path "/caf301de-9bdf-4647-9950-327c7a304977"
 					(reference "U3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+5V")
+		(at 53.34 26.67 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "2702d30e-a530-4cc2-95fd-11f8b84daca9")
+		(property "Reference" "#PWR021"
+			(at 53.34 22.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+5V"
+			(at 53.34 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 53.34 26.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 53.34 26.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 53.34 26.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1e9b6b25-618b-469c-aa86-6a94a22d86bb")
+		)
+		(instances
+			(project "buttler_pcb"
+				(path "/caf301de-9bdf-4647-9950-327c7a304977"
+					(reference "#PWR021")
 					(unit 1)
 				)
 			)
@@ -6698,7 +6774,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_SO:SOP-4_3.8x4.1mm_P2.54mm"
+		(property "Footprint" "schematic:OPTO-SMD4"
 			(at 114.3 92.71 0)
 			(effects
 				(font
@@ -7665,7 +7741,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Package_SO:SOP-4_3.8x4.1mm_P2.54mm"
+		(property "Footprint" "schematic:OPTO-SMD4"
 			(at 114.3 76.2 0)
 			(effects
 				(font
@@ -7913,6 +7989,72 @@
 			(project ""
 				(path "/caf301de-9bdf-4647-9950-327c7a304977"
 					(reference "C1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 53.34 25.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b87615c9-c6ce-4e6a-8a7b-b205cdc7ee05")
+		(property "Reference" "#FLG03"
+			(at 53.34 23.495 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "PWR_FLAG"
+			(at 53.34 21.8981 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 53.34 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 53.34 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 53.34 25.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "2761df15-a7d1-434e-82bf-1aa53f8ce2b3")
+		)
+		(instances
+			(project "buttler_pcb"
+				(path "/caf301de-9bdf-4647-9950-327c7a304977"
+					(reference "#FLG03")
 					(unit 1)
 				)
 			)
