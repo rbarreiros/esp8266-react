@@ -58,7 +58,9 @@ void SystemSettingsService::configureSystemSettings()
 {
     // configure pins
     if(_state.resetEnabled)
-        pinMode(_state.resetPin, FACTORY_SYSTEM_RESET_BUTTON_PULLUP ? INPUT_PULLUP : INPUT_PULLDOWN);
+    {
+        pinMode(_state.resetPin, FACTORY_SYSTEM_RESET_BUTTON_PULLUP ? INPUT_PULLUP : INPUT);
+    }
 
     if(_state.wifiLedEnabled)
     {
@@ -69,22 +71,23 @@ void SystemSettingsService::configureSystemSettings()
 
 void SystemSettingsService::processResetButton()
 {
-    if(m_lastResetButtonState == RESET_BUTTON_OFF 
-        && digitalRead(_state.resetPin) == RESET_BUTTON_ON)
+
+    if((m_lastResetButtonState == RESET_BUTTON_OFF) 
+        && (digitalRead(_state.resetPin) == RESET_BUTTON_ON))
     { // First press
         m_lastResetButtonState = RESET_BUTTON_ON;
         m_lastResetButtonPushed = millis();
     }
-    else if(m_lastResetButtonState == RESET_BUTTON_ON 
-        && digitalRead(_state.resetPin) == RESET_BUTTON_ON)
+    else if((m_lastResetButtonState == RESET_BUTTON_ON)
+        && (digitalRead(_state.resetPin) == RESET_BUTTON_ON))
     { // Continuing to push
         if((millis() - m_lastResetButtonPushed) > _state.resetTime)
         {
             m_fr->factoryReset();
         }
     }
-    else if(m_lastResetButtonState == RESET_BUTTON_ON 
-        && digitalRead(_state.resetPin) == RESET_BUTTON_OFF)
+    else if((m_lastResetButtonState == RESET_BUTTON_ON)
+        && (digitalRead(_state.resetPin) == RESET_BUTTON_OFF))
     {  // stopped pressing before required time
         m_lastResetButtonState = RESET_BUTTON_OFF;
     }

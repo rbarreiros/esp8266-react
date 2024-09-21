@@ -9,8 +9,8 @@
 
 #define SERIAL_BAUD_RATE 115200
 
-TaskHandle_t rfTask;
-TaskHandle_t espTask;
+//TaskHandle_t rfTask;
+//TaskHandle_t espTask;
 
 // Global Async Timer
 AsyncTimer Timer;

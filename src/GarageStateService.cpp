@@ -50,16 +50,35 @@ GarageStateService::GarageStateService(
 void GarageStateService::begin()
 {
     // Configure relay Pin
-    pinMode(RELAY_PIN, OUTPUT);
+    pinMode(FACTORY_SYSTEM_RELAY_PIN, OUTPUT);
 
     // Configure endstops
-    pinMode(ENDSTOP_CLOSED_PIN, INPUT);
-    pinMode(ENDSTOP_OPEN_PIN, INPUT);
+    pinMode(FACTORY_SYSTEM_ENDSTOP_CLOSE_PIN, 
+        FACTORY_SYSTEM_ENDSTOP_CLOSE_PULLUP ? INPUT_PULLUP : INPUT);
+    pinMode(FACTORY_SYSTEM_ENDSTOP_OPEN_PIN, 
+        FACTORY_SYSTEM_ENDSTOP_OPEN_PULLUP ? INPUT_PULLUP : INPUT);
 
     // Barrier
-    pinMode(BARRIER_PIN, INPUT);
+    pinMode(FACTORY_SYSTEM_BARRIER_PIN, 
+        FACTORY_SYSTEM_BARRIER_PULLUP ? INPUT_PULLUP : INPUT);
 
     _state.relayOn = DEFAULT_RELAY_STATE;
+
+    // Configure status LED's
+#if FACTORY_SYSTEM_ENDSTOP_OPEN_LED == true
+    pinMode(FACTORY_SYSTEM_ENDSTOP_OPEN_LED_PIN, OUTPUT);
+    digitalWrite(FACTORY_SYSTEM_ENDSTOP_OPEN_LED_PIN, ENDSTOP_OPEN_LED_OFF);
+#endif
+
+#if FACTORY_SYSTEM_ENDSTOP_CLOSE_LED == true
+    pinMode(FACTORY_SYSTEM_ENDSTOP_CLOSE_LED_PIN, OUTPUT);
+    digitalWrite(FACTORY_SYSTEM_ENDSTOP_CLOSE_LED_PIN, ENDSTOP_CLOSE_LED_OFF);
+#endif
+
+#if FACTORY_SYSTEM_BARRIER_LED == true
+    pinMode(FACTORY_SYSTEM_BARRIER_LED_PIN, OUTPUT);
+    digitalWrite(FACTORY_SYSTEM_BARRIER_LED_PIN, BARRIER_LED_OFF);
+#endif
 
     updateEndstops();
     onConfigUpdate();
@@ -227,7 +246,7 @@ void GarageStateService::registerConfig()
 
 void GarageStateService::onConfigUpdate()
 {
-    digitalWrite(RELAY_PIN, _state.relayOn ? RELAY_ON : RELAY_OFF);
+    digitalWrite(FACTORY_SYSTEM_RELAY_PIN, _state.relayOn ? RELAY_ON : RELAY_OFF);
 
     if (_state.relayOn && m_relayAutoOff)
     {
@@ -249,9 +268,18 @@ void GarageStateService::onConfigUpdate()
 void GarageStateService::updateEndstops()
 {
     // check current endstop status
-    _state.endstopOpen = digitalRead(ENDSTOP_OPEN_PIN) == ENDSTOP_OPEN_ON;
-    _state.endstopClosed = digitalRead(ENDSTOP_CLOSED_PIN) == ENDSTOP_CLOSED_ON;
-    _state.barrierTriggered = digitalRead(BARRIER_PIN) == BARRIER_ON;
+    _state.endstopOpen = digitalRead(FACTORY_SYSTEM_ENDSTOP_OPEN_PIN) == FACTORY_SYSTEM_ENDSTOP_OPEN_ON;
+    _state.endstopClosed = digitalRead(FACTORY_SYSTEM_ENDSTOP_CLOSE_PIN) == FACTORY_SYSTEM_ENDSTOP_CLOSE_ON;
+    _state.barrierTriggered = digitalRead(FACTORY_SYSTEM_BARRIER_PIN) == FACTORY_SYSTEM_BARRIER_ON;
+
+    digitalWrite(FACTORY_SYSTEM_ENDSTOP_OPEN_PIN,
+        _state.endstopOpen ? ENDSTOP_OPEN_LED_ON : ENDSTOP_OPEN_LED_OFF);
+    
+    digitalWrite(FACTORY_SYSTEM_ENDSTOP_CLOSE_PIN,
+        _state.endstopClosed ? ENDSTOP_CLOSE_LED_ON : ENDSTOP_CLOSE_LED_OFF);
+
+    digitalWrite(FACTORY_SYSTEM_BARRIER_PIN,
+        _state.barrierTriggered ? BARRIER_LED_ON : BARRIER_LED_OFF);
 
     // Error, should never happen....
     if (_state.endstopOpen && _state.endstopClosed)
