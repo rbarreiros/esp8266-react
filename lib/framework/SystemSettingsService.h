@@ -110,6 +110,7 @@ private:
     bool m_toggleLed;
     unsigned long m_toggleTime;
     unsigned long m_lastWifiLedTick;
+    wl_status_t m_lastWifiStatus;
     
 
     void configureSystemSettings();

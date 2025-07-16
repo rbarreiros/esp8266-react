@@ -32,7 +32,8 @@ SystemSettingsService::SystemSettingsService(
     m_lastResetButtonPushed{0},
     m_toggleLed{false},
     m_toggleTime{WIFI_LED_LONG_TOGGLE},
-    m_lastWifiLedTick{0}
+    m_lastWifiLedTick{0},
+    m_lastWifiStatus{WL_IDLE_STATUS}
 {
 }
 
@@ -96,10 +97,17 @@ void SystemSettingsService::processWiFiLed()
 
     m_ap->read([&](APSettings& state) { ap = state; });
 
+    wl_status_t currStatus = WiFi.status();
+
+    if(m_lastWifiStatus != currStatus)
+    {
+        m_lastWifiStatus = currStatus;
+
     // Wifi connected, led on
-    if(WiFi.status() == WL_CONNECTED)
+    if(currStatus == WL_CONNECTED)
     {
         m_toggleLed = false;
+        Serial.println("WIFI_LED_ON");
         digitalWrite(_state.wifiLedPin, WIFI_LED_ON);
     }
     // AP mode is always on, 
@@ -107,6 +115,7 @@ void SystemSettingsService::processWiFiLed()
     else if(ap.provisionMode == AP_MODE_ALWAYS)
     {
         m_toggleLed = true;
+        Serial.println("WIFI_LED_TOGGLE");
         m_toggleTime = WIFI_LED_LONG_TOGGLE;
     }
     // AP Mode is on, will disconnect after
@@ -114,13 +123,17 @@ void SystemSettingsService::processWiFiLed()
     else if(ap.provisionMode == AP_MODE_DISCONNECTED)
     {
         m_toggleLed = true;
+        Serial.println("WIFI_LED_SHORT_TOGGLE");
         m_toggleTime = WIFI_LED_SHORT_TOGGLE;
     }
     // AP mode off, and wifi is disconnected
     else if(ap.provisionMode == AP_MODE_NEVER)
     {
         m_toggleLed = true;
+        Serial.println("WIFI_LED_VERY_SHORT_TOGGLE");
         m_toggleTime = WIFI_LED_VERY_SHORT_TOGGLE;
+    }
+
     }
 }
 

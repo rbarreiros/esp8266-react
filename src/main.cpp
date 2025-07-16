@@ -9,8 +9,8 @@
 
 #define SERIAL_BAUD_RATE 115200
 
-TaskHandle_t rfTask;
-TaskHandle_t espTask;
+//TaskHandle_t rfTask;
+//TaskHandle_t espTask;
 
 // Global Async Timer
 AsyncTimer Timer;
@@ -38,6 +38,7 @@ RemoteStateService remoteState =
                         esp8266React.getMqttClient(),
                        &rfController, &remoteSettings, &garageState);
 
+/*
 void RfControllerTask(void* param)
 {
     RfRemoteController *rf = static_cast<RfRemoteController*>(param);
@@ -56,7 +57,7 @@ void esp8266ReactTask(void *param)
         esp->loop();
     }
 }
-
+*/
 
 void setup()
 {
@@ -98,7 +99,7 @@ void loop()
     // run rf loop function
     // receives remote codes
     //  this should really run very fast!!!
-    rfController.loop();
+    //rfController.loop();
 
     // Update global timer
     // triggers timer functions
@@ -109,5 +110,5 @@ void loop()
 
     // Garage door handling
     // endstop and door status
-    garageState.loop();
+    //garageState.loop();
 }
