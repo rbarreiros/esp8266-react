@@ -30,6 +30,7 @@
 #include <WiFiSettingsService.h>
 #include <WiFiStatus.h>
 #include <ESPFS.h>
+#include <MemoryManager.h>
 
 #ifdef PROGMEM_WWW
 #include <WWWData.h>

@@ -28,6 +28,8 @@ GarageStateService::GarageStateService(
                   securityManager,
                   AuthenticationPredicates::IS_AUTHENTICATED},
       m_mqttClient{mqttClient},
+      m_mqttConsolidatedPubSub{GarageStateService::consolidatedRead, 
+                               GarageStateService::consolidatedUpdate, this, m_mqttClient},
       m_mqttBarrierPubSub{GarageState::haBarrierTriggeredRead, 
                         GarageState::haDummyUpdate, this, m_mqttClient},
       m_mqttEndstopClosedPubSub{GarageState::haEndstopClosedRead,
@@ -214,10 +216,86 @@ void GarageStateService::registerBarrier()
     m_mqttBarrierPubSub.configureTopics(pubTopic, "");
 }
 
+void GarageStateService::registerConsolidatedTopic()
+{
+    JsonDocument json;
+    String configTopic, subTopic, pubTopic, payload;
+    String uniqueId = SettingValue::getUniqueId();
+
+    // Entity device info
+    JsonObject dev = json["device"].to<JsonObject>();
+    getDevice(dev);
+
+    // Consolidated garage topic - all state in one efficient message
+    json["~"] = "homeassistant/garage/garage_" + uniqueId;
+    json["name"] = "Garage Door System";
+    json["uniq_id"] = "buttler_garage_" + uniqueId;
+    json["cmd_t"] = "~/cmd";
+    json["stat_t"] = "~/state";
+    json["val_tpl"] = "{{ value_json }}";
+    json["json_attr_t"] = "~/state";
+    json["device_class"] = "garage";
+
+    configTopic = json["~"].as<String>() + "/config";
+    subTopic = json["~"].as<String>() + "/cmd";
+    pubTopic = json["~"].as<String>() + "/state";
+
+    serializeJson(json, payload);
+
+    m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
+    m_mqttConsolidatedPubSub.configureTopics(pubTopic, subTopic);
+}
+
+// Consolidated MQTT payload readers
+void GarageStateService::consolidatedRead(GarageState& state, JsonObject& root)
+{
+    // Compact consolidated payload - all garage data in one message
+    JsonObject status = root["st"].to<JsonObject>();
+    status["rel"] = state.relayOn;
+    status["sts"] = static_cast<uint8_t>(state.status);
+    status["ec"] = state.endstopClosed;
+    status["eo"] = state.endstopOpen;
+    status["bar"] = state.barrierTriggered;
+    
+    // Additional metadata
+    root["ts"] = millis();
+    root["v"] = 1; // Version for future compatibility
+}
+
+StateUpdateResult GarageStateService::consolidatedUpdate(JsonObject& root, GarageState& state)
+{
+    bool changed = false;
+    
+    // Handle relay commands
+    if (root["rel"].is<bool>()) {
+        bool newRelayState = root["rel"];
+        if (state.relayOn != newRelayState) {
+            state.relayOn = newRelayState;
+            changed = true;
+        }
+    }
+    
+    // Handle duration commands
+    if (root["dur"].is<uint32_t>()) {
+        uint32_t duration = root["dur"];
+        if (duration > 0) {
+            state.relayOn = true;
+            changed = true;
+            // TODO: Implement duration logic
+        }
+    }
+    
+    return changed ? StateUpdateResult::CHANGED : StateUpdateResult::UNCHANGED;
+}
+
 void GarageStateService::registerConfig()
 {
     if (!m_mqttClient->connected()) return;
 
+    // Register consolidated topic first (new efficient approach)
+    registerConsolidatedTopic();
+
+    // Keep individual topics for backward compatibility
     registerRelay();
     registerStatus();
     registerEndstopOpen();

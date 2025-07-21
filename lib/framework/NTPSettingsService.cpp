@@ -31,6 +31,14 @@ NTPSettingsService::NTPSettingsService(AsyncWebServer* server, FS* fs, SecurityM
   _timeHandler.setMethod(HTTP_POST);
   //_timeHandler.setMaxContentLength(MAX_TIME_SIZE);
   server->addHandler(&_timeHandler);
+  
+  // WiFi event handlers moved to begin() to avoid static initialization issues
+  addUpdateHandler([&](const String& originId) { configureNTP(); }, false);
+}
+
+void NTPSettingsService::begin() 
+{
+  // WiFi event handlers moved here from constructor to avoid static initialization issues
 #ifdef ESP32
   WiFi.onEvent(
       std::bind(&NTPSettingsService::onStationModeDisconnected, this, std::placeholders::_1, std::placeholders::_2),
@@ -47,11 +55,7 @@ NTPSettingsService::NTPSettingsService(AsyncWebServer* server, FS* fs, SecurityM
   );
 
 #endif
-  addUpdateHandler([&](const String& originId) { configureNTP(); }, false);
-}
 
-void NTPSettingsService::begin() 
-{
   _fsPersistence.readFromFS();
   configureNTP();
 }

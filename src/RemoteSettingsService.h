@@ -195,7 +195,7 @@ public:
 
 private:
     HttpEndpoint<RemoteSettings>    m_httpEndpoint;
-    WebSocketTxRx<RemoteSettings>   m_webSocket; // Only used for pairing remotes
+    WebSocketTxRxDelta<RemoteSettings>   m_webSocket; // Only used for pairing remotes
     FSPersistence<RemoteSettings>   m_fs;
     SecurityManager*                m_security;
     GarageStateService*             m_garageService;

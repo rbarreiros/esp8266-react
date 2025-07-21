@@ -21,6 +21,13 @@ OTASettingsService::OTASettingsService(AsyncWebServer* server, FS* fs, SecurityM
     },
     _arduinoOTA{nullptr} 
 {
+  // WiFi event handlers moved to begin() to avoid static initialization issues
+  addUpdateHandler([&](const String& originId) { configureArduinoOTA(); }, false);
+}
+
+void OTASettingsService::begin() 
+{
+  // WiFi event handlers moved here from constructor to avoid static initialization issues
 #ifdef ESP32
   WiFi.onEvent(std::bind(&OTASettingsService::onStationModeGotIP, this, std::placeholders::_1, std::placeholders::_2),
                WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_GOT_IP);
@@ -29,11 +36,7 @@ OTASettingsService::OTASettingsService(AsyncWebServer* server, FS* fs, SecurityM
     std::bind(&OTASettingsService::onStationModeGotIP, this, std::placeholders::_1)
   );
 #endif
-  addUpdateHandler([&](const String& originId) { configureArduinoOTA(); }, false);
-}
 
-void OTASettingsService::begin() 
-{
   _fsPersistence.readFromFS();
   configureArduinoOTA();
 }

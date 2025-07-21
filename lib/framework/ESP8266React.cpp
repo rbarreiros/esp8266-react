@@ -99,6 +99,23 @@ void ESP8266React::begin() {
 #elif defined(ESP8266)
   ESPFS.begin();
 #endif
+  
+  // Initialize memory manager first
+  MemoryManager::getInstance().begin();
+  
+  // Set up memory event callbacks
+  MemoryManager::getInstance().setLowMemoryCallback([](const MemoryStats& stats) {
+    Serial.printf("MEMORY WARNING: Low memory - %u bytes free\n", stats.freeHeap);
+  });
+  
+  MemoryManager::getInstance().setCriticalMemoryCallback([](const MemoryStats& stats) {
+    Serial.printf("MEMORY CRITICAL: Only %u bytes free!\n", stats.freeHeap);
+  });
+  
+  MemoryManager::getInstance().setFragmentationCallback([](const MemoryStats& stats) {
+    Serial.printf("MEMORY FRAGMENTATION: %u%% fragmented\n", stats.heapFragmentation);
+  });
+  
   _wifiSettingsService.begin();
   _apSettingsService.begin();
 #if FT_ENABLED(FT_NTP)
@@ -117,8 +134,12 @@ void ESP8266React::begin() {
 }
 
 void ESP8266React::loop() {
+  // Memory manager monitoring (high priority)
+  MemoryManager::getInstance().loop();
+  
   _wifiSettingsService.loop();
   _apSettingsService.loop();
+  _wifiScanner.loop();  // Check for WiFi scan completion
 #if FT_ENABLED(FT_OTA)
   _otaSettingsService.loop();
 #endif

@@ -31,6 +31,8 @@ RemoteStateService::RemoteStateService(
     m_remoteSettings{remoteSettings},
     m_garage{garageService},
     m_wasPairing{false},
+    m_mqttConsolidatedPubSub{RemoteStateService::consolidatedRead, 
+                             RemoteStateService::consolidatedUpdate, this, m_mqttClient},
     m_mqttPairingPubSub{&RemoteState::haPairingRead, &RemoteState::haPairingUpdate, this, m_mqttClient},
     m_mqttRemotePubSub{&RemoteState::haRead, &RemoteState::haUpdate, this, m_mqttClient}
 {
@@ -202,8 +204,91 @@ void RemoteStateService::registerPairingSwitch()
     m_mqttPairingPubSub.configureTopics(pubTopic, subTopic);
 }
 
+void RemoteStateService::registerConsolidatedTopic()
+{
+    JsonDocument json;
+    String configTopic, subTopic, pubTopic, payload;
+    String uniqueId = SettingValue::getUniqueId();
+
+    // Entity device info
+    JsonObject dev = json["device"].to<JsonObject>();
+    getDevice(dev);
+
+    // Consolidated remote topic - all state in one efficient message
+    json["~"] = "homeassistant/garage/remote_" + uniqueId;
+    json["name"] = "Garage Remote System";
+    json["uniq_id"] = "buttler_remote_" + uniqueId;
+    json["cmd_t"] = "~/cmd";
+    json["stat_t"] = "~/state";
+    json["val_tpl"] = "{{ value_json }}";
+    json["json_attr_t"] = "~/state";
+    json["device_class"] = "remote";
+
+    configTopic = json["~"].as<String>() + "/config";
+    subTopic = json["~"].as<String>() + "/cmd";
+    pubTopic = json["~"].as<String>() + "/state";
+
+    serializeJson(json, payload);
+
+    m_mqttClient->publish(configTopic.c_str(), 0, false, payload.c_str());
+    m_mqttConsolidatedPubSub.configureTopics(pubTopic, subTopic);
+}
+
+// Consolidated MQTT payload readers
+void RemoteStateService::consolidatedRead(RemoteState& state, JsonObject& root)
+{
+    // Compact consolidated payload - all remote data in one message
+    JsonObject remote = root["rem"].to<JsonObject>();
+    remote["id"] = state.rem.id();
+    remote["btn"] = state.rem.button;
+    remote["ser"] = state.rem.getSerial();
+    remote["desc"] = state.rem.description;
+    remote["valid"] = state.isValid;
+    remote["pair"] = state.isPairing;
+    
+    if (!state.error.isEmpty()) {
+        remote["err"] = state.error;
+    }
+    
+    // Additional metadata
+    root["ts"] = millis();
+    root["v"] = 1; // Version for future compatibility
+}
+
+StateUpdateResult RemoteStateService::consolidatedUpdate(JsonObject& root, RemoteState& state)
+{
+    bool changed = false;
+    
+    // Handle pairing commands
+    if (root["pair"].is<bool>()) {
+        bool newPairing = root["pair"];
+        if (state.isPairing != newPairing) {
+            state.isPairing = newPairing;
+            changed = true;
+        }
+    }
+    
+    // Handle remote commands
+    if (root["cmd"].is<String>()) {
+        String cmd = root["cmd"];
+        if (cmd == "start_pairing") {
+            state.isPairing = true;
+            changed = true;
+        } else if (cmd == "stop_pairing") {
+            state.isPairing = false;
+            changed = true;
+        }
+    }
+    
+    return changed ? StateUpdateResult::CHANGED : StateUpdateResult::UNCHANGED;
+}
+
 void RemoteStateService::registerConfig()
 {
+    // Register consolidated topic first (new efficient approach)
+    registerConsolidatedTopic();
+    
+    // Keep individual topics for backward compatibility
     registerDeviceTrigger();
     registerPairingSwitch();
 }

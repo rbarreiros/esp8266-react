@@ -22,7 +22,11 @@
 #define WIFI_SETTINGS_FILE "/config/wifiSettings.json"
 #define WIFI_SETTINGS_SERVICE_PATH "/rest/wifiSettings"
 
-#define WIFI_RECONNECTION_DELAY 1000 * 30
+// Improved WiFi reconnection timing
+#define WIFI_RECONNECTION_DELAY 5000        // Initial delay: 5 seconds
+#define WIFI_RECONNECTION_DELAY_MAX 60000    // Maximum delay: 60 seconds
+#define WIFI_CONNECTION_TIMEOUT 20000        // Connection timeout: 20 seconds
+#define WIFI_MAX_RETRY_ATTEMPTS 10           // Maximum retry attempts
 
 class WiFiSettings 
 {
@@ -100,7 +104,14 @@ public:
  private:
   HttpEndpoint<WiFiSettings> _httpEndpoint;
   FSPersistence<WiFiSettings> _fsPersistence;
+  
+  // Enhanced connection management
   unsigned long _lastConnectionAttempt;
+  unsigned long _connectionStartTime;
+  unsigned long _reconnectionDelay;
+  unsigned int _retryAttempts;
+  bool _isConnecting;
+  bool _forceReconnect;
 
 #ifdef ESP32
   bool _stopping;
@@ -113,6 +124,9 @@ public:
 
   void reconfigureWiFiConnection();
   void manageSTA();
+  void resetConnectionState();
+  void handleConnectionTimeout();
+  unsigned long calculateBackoffDelay();
 };
 
 #endif  // end WiFiSettingsService_h

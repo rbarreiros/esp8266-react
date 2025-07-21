@@ -18,6 +18,10 @@ const LayoutMenu: FC = () => {
   const { features } = useContext(FeaturesContext);
   const authenticatedContext = useContext(AuthenticatedContext);
 
+  // Debug logging
+  console.log('LayoutMenu - features:', features);
+  console.log('LayoutMenu - features.project:', features?.project);
+
   return (
     <>
       {features.project && (

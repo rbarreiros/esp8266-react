@@ -48,9 +48,10 @@
 #define AP_SETTINGS_FILE "/config/apSettings.json"
 #define AP_SETTINGS_SERVICE_PATH "/rest/apSettings"
 
-#define AP_MODE_ALWAYS 0
-#define AP_MODE_DISCONNECTED 1
-#define AP_MODE_NEVER 2
+// AP Provision Modes
+#define AP_MODE_ALWAYS 0       // Access Point always enabled, regardless of WiFi connection status
+#define AP_MODE_DISCONNECTED 1 // Access Point enabled only when WiFi is not connected
+#define AP_MODE_NEVER 2        // Access Point never enabled, regardless of WiFi connection status
 
 #define MANAGE_NETWORK_DELAY 10000
 #define DNS_PORT 53
@@ -96,7 +97,7 @@ class APSettings
     APSettings newSettings = {};
     newSettings.provisionMode = root["provision_mode"] | FACTORY_AP_PROVISION_MODE;
     
-    switch (settings.provisionMode) 
+    switch (newSettings.provisionMode) 
     {
       case AP_MODE_ALWAYS:
       case AP_MODE_DISCONNECTED:

@@ -115,11 +115,16 @@ public:
 
 private:
     espMqttClientAsync*         m_mqttClient;
-    WebSocketTxRx<RemoteState>  m_websocket;
+    WebSocketTxRxDelta<RemoteState>  m_websocket;
     RfRemoteController*         m_rfctrl;
     RemoteSettingsService*      m_remoteSettings;
     GarageStateService*         m_garage;
     bool                        m_wasPairing;
+    
+    // Consolidated MQTT - single topic for all remote data
+    MqttPubSub<RemoteState>     m_mqttConsolidatedPubSub;
+    
+    // Individual topics for backward compatibility
     MqttPubSub<RemoteState>     m_mqttPairingPubSub;
     MqttPubSub<RemoteState>     m_mqttRemotePubSub;
 
@@ -128,7 +133,12 @@ private:
     void registerConfig();
     void registerDeviceTrigger();
     void registerPairingSwitch();
+    void registerConsolidatedTopic();
     void getDevice(JsonObject& dev);
+    
+    // Consolidated MQTT payload readers
+    static void consolidatedRead(RemoteState& state, JsonObject& root);
+    static StateUpdateResult consolidatedUpdate(JsonObject& root, RemoteState& state);
 };
 
 

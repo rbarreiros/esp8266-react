@@ -5,6 +5,7 @@
 #include <StatefulService.h>
 #include <ESPAsyncWebServer.h>
 #include <SecurityManager.h>
+#include <MemoryManager.h>
 
 #define WEB_SOCKET_CLIENT_ID_MSG_SIZE 128
 
@@ -26,7 +27,7 @@ protected:
                      AuthenticationPredicate authenticationPredicate) 
     :
       _statefulService{statefulService}, 
-      _server{server}, 
+      _server{server},
       _webSocket{new AsyncWebSocket(webSocketPath)}
   {
     _webSocket->setFilter(securityManager->filterRequest(authenticationPredicate));
@@ -47,7 +48,7 @@ protected:
                      const char* webSocketPath) 
     :
       _statefulService{statefulService}, 
-      _server{server}, 
+      _server{server},
       _webSocket{new AsyncWebSocket(webSocketPath)}
   {
     _webSocket->onEvent(std::bind(&WebSocketConnector::onWSEvent,
@@ -77,6 +78,170 @@ protected:
   void forbidden(AsyncWebServerRequest* request) 
   {
     request->send(403);
+  }
+};
+
+// Delta-enabled WebSocket transmitter for optimized updates
+template <class T>
+class WebSocketTxDelta : virtual public WebSocketConnector<T> 
+{
+public:
+  WebSocketTxDelta(JsonStateReader<T> stateReader,
+                   StatefulService<T>* statefulService,
+                   AsyncWebServer* server,
+                   const char* webSocketPath,
+                   SecurityManager* securityManager,
+                   AuthenticationPredicate authenticationPredicate = AuthenticationPredicates::IS_ADMIN) 
+    :
+      WebSocketConnector<T>
+      {
+        statefulService,
+        server,
+        webSocketPath,
+        securityManager,
+        authenticationPredicate
+      },
+      _stateReader{stateReader},
+      _hasInitialState{false}
+  {
+    WebSocketConnector<T>::_statefulService->addUpdateHandler(
+        [&](const String& originId) { transmitDelta(nullptr, originId); }, false);
+  }
+
+  WebSocketTxDelta(JsonStateReader<T> stateReader,
+                   StatefulService<T>* statefulService,
+                   AsyncWebServer* server,
+                   const char* webSocketPath) 
+    :
+      WebSocketConnector<T>{statefulService, server, webSocketPath}, 
+      _stateReader{stateReader},
+      _hasInitialState{false}
+  {
+    WebSocketConnector<T>::_statefulService->addUpdateHandler(
+      [&](const String& originId) { transmitDelta(nullptr, originId); }, false);
+  }
+
+ protected:
+  virtual void onWSEvent(AsyncWebSocket* server,
+                         AsyncWebSocketClient* client,
+                         AwsEventType type,
+                         void* arg,
+                         uint8_t* data,
+                         size_t len) 
+  {
+    if (type == WS_EVT_CONNECT) {
+      // when a client connects, we transmit it's id and the current payload
+      transmitId(client);
+      transmitFullState(client, WEB_SOCKET_ORIGIN);
+    }
+  }
+
+ private:
+  JsonStateReader<T> _stateReader;
+  bool _hasInitialState;
+  String _lastStateSnapshot;
+
+  void transmitId(AsyncWebSocketClient* client) 
+  {
+    JsonDocument json;
+    JsonObject root = json.to<JsonObject>();
+    root["type"] = "id";
+    root["id"] = WebSocketConnector<T>::clientId(client).c_str();
+    size_t len = measureJson(json);
+    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket->makeBuffer(len);
+    if (buffer) {
+      serializeJson(json, buffer->get(), len);
+      client->text(buffer);
+    }
+  }
+
+  // Send full state for new connections
+  void transmitFullState(AsyncWebSocketClient* client, const String& originId) 
+  {
+    JsonDocument json;
+    JsonObject root = json.to<JsonObject>();
+    root["type"] = "payload";
+    root["origin_id"] = originId;
+    JsonObject payload = root["payload"].to<JsonObject>();
+    WebSocketConnector<T>::_statefulService->read(payload, _stateReader);
+
+    size_t len = measureJson(json);
+    AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket->makeBuffer(len);
+    if (buffer) {
+      serializeJson(json, buffer->get(), len);
+      if (client) {
+        client->text(buffer);
+      }
+    }
+    
+    // Store snapshot for delta calculations
+    _lastStateSnapshot = "";
+    serializeJson(payload, _lastStateSnapshot);
+    _hasInitialState = true;
+  }
+
+  // Send only changed fields (delta update)
+  void transmitDelta(AsyncWebSocketClient* client, const String& originId) 
+  {
+    if (!_hasInitialState) {
+      // First update - send full state
+      transmitFullState(client, originId);
+      return;
+    }
+    
+    // Get current state
+    JsonDocument currentJson;
+    JsonObject currentState = currentJson.to<JsonObject>();
+    WebSocketConnector<T>::_statefulService->read(currentState, _stateReader);
+    
+    // Serialize current state for comparison
+    String currentStateStr = "";
+    serializeJson(currentState, currentStateStr);
+    
+    // Check if anything changed
+    if (currentStateStr == _lastStateSnapshot) {
+      return; // No changes, don't send anything
+    }
+    
+    // Parse previous state for comparison
+    JsonDocument previousJson;
+    deserializeJson(previousJson, _lastStateSnapshot);
+    JsonObject previousState = previousJson.as<JsonObject>();
+    
+    // Build delta object with only changed fields
+    JsonDocument deltaJson;
+    JsonObject root = deltaJson.to<JsonObject>();
+    root["type"] = "delta";
+    root["origin_id"] = originId;
+    JsonObject delta = root["delta"].to<JsonObject>();
+    
+    // Compare each field and add only changed ones
+    for (JsonPair currentPair : currentState) {
+      const char* key = currentPair.key().c_str();
+      JsonVariant currentValue = currentPair.value();
+      JsonVariant previousValue = previousState[key];
+      
+      if (currentValue != previousValue) {
+        delta[key] = currentValue;
+      }
+    }
+    
+    // Send delta if there are changes
+    if (delta.size() > 0) {
+      size_t len = measureJson(deltaJson);
+      AsyncWebSocketMessageBuffer* buffer = WebSocketConnector<T>::_webSocket->makeBuffer(len);
+      if (buffer) {
+        serializeJson(deltaJson, buffer->get(), len);
+        if (client) {
+          client->text(buffer);
+        } else {
+          WebSocketConnector<T>::_webSocket->textAll(buffer);
+        }
+      }
+      
+      // Update snapshot
+      _lastStateSnapshot = currentStateStr;
+    }
   }
 };
 
@@ -180,7 +345,7 @@ public:
 };
 
 template <class T>
-class WebSocketRx : virtual public WebSocketConnector<T> 
+class WebSocketRx : virtual public WebSocketConnector<T>
 {
 public:
   WebSocketRx(JsonStateUpdater<T> stateUpdater,
@@ -307,6 +472,71 @@ public:
   {
     WebSocketRx<T>::onWSEvent(server, client, type, arg, data, len);
     WebSocketTx<T>::onWSEvent(server, client, type, arg, data, len);
+  }
+};
+
+// Delta functionality for optimized WebSocket communication
+template <class T>
+class WebSocketTxRxDelta : public WebSocketTxDelta<T>, public WebSocketRx<T> 
+{
+public:
+  WebSocketTxRxDelta(JsonStateReader<T> stateReader,
+                     JsonStateUpdater<T> stateUpdater,
+                     StatefulService<T>* statefulService,
+                     AsyncWebServer* server,
+                     const char* webSocketPath,
+                     SecurityManager* securityManager,
+                     AuthenticationPredicate authenticationPredicate = AuthenticationPredicates::IS_ADMIN) 
+    :
+      WebSocketConnector<T>
+      {
+        statefulService,
+        server,
+        webSocketPath,
+        securityManager,
+        authenticationPredicate
+      },
+      WebSocketTxDelta<T>
+      {
+        stateReader,
+        statefulService,
+        server,
+        webSocketPath,
+        securityManager,
+        authenticationPredicate
+      },
+      WebSocketRx<T>
+      {
+        stateUpdater,
+        statefulService,
+        server,
+        webSocketPath,
+        securityManager,
+        authenticationPredicate
+      } 
+  {}
+
+  WebSocketTxRxDelta(JsonStateReader<T> stateReader,
+                     JsonStateUpdater<T> stateUpdater,
+                     StatefulService<T>* statefulService,
+                     AsyncWebServer* server,
+                     const char* webSocketPath) 
+    :
+      WebSocketConnector<T>{statefulService, server, webSocketPath},
+      WebSocketTxDelta<T>{stateReader, statefulService, server, webSocketPath},
+      WebSocketRx<T>{stateUpdater, statefulService, server, webSocketPath} 
+  {}
+
+ protected:
+  void onWSEvent(AsyncWebSocket* server,
+                 AsyncWebSocketClient* client,
+                 AwsEventType type,
+                 void* arg,
+                 uint8_t* data,
+                 size_t len) 
+  {
+    WebSocketRx<T>::onWSEvent(server, client, type, arg, data, len);
+    WebSocketTxDelta<T>::onWSEvent(server, client, type, arg, data, len);
   }
 };
 

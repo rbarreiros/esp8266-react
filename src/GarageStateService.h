@@ -140,9 +140,8 @@ class GarageState
 
 class GarageStateService : public StatefulService<GarageState>
 {
-   public:
-    GarageStateService(AsyncWebServer* server, SecurityManager* securityManager,
-                       espMqttClientAsync* mqttClient);
+public:
+    GarageStateService(AsyncWebServer* server, SecurityManager* securityManager, espMqttClientAsync* mqttClient);
     void begin();
     void loop();
 
@@ -151,14 +150,19 @@ class GarageStateService : public StatefulService<GarageState>
     bool getRelayAutoOff() { return m_relayAutoOff; }
     unsigned long getRelayOnTimer() { return m_relayOnTimer; }
 
-   private:
-    WebSocketTxRx<GarageState>  m_webSocket;
-    espMqttClientAsync*         m_mqttClient;
-    MqttPubSub<GarageState>     m_mqttBarrierPubSub;
-    MqttPubSub<GarageState>     m_mqttEndstopClosedPubSub;
-    MqttPubSub<GarageState>     m_mqttEndstopOpenPubSub;
-    MqttPubSub<GarageState>     m_mqttStatusPubSub;
-    MqttPubSub<GarageState>     m_mqttRelayPubSub;
+private:
+    WebSocketTxRxDelta<GarageState> m_webSocket;
+    espMqttClientAsync* m_mqttClient;
+    
+    // Consolidated MQTT - single topic for all garage data
+    MqttPubSub<GarageState> m_mqttConsolidatedPubSub;
+    
+    // Individual HA topics for backward compatibility (can be removed later)
+    MqttPubSub<GarageState> m_mqttBarrierPubSub;
+    MqttPubSub<GarageState> m_mqttEndstopClosedPubSub;
+    MqttPubSub<GarageState> m_mqttEndstopOpenPubSub;
+    MqttPubSub<GarageState> m_mqttStatusPubSub;
+    MqttPubSub<GarageState> m_mqttRelayPubSub;
 
     GarageState::GarageStatus_t m_lastEsState = GarageState::STATUS_ERROR;
     bool m_relayAutoOff;
@@ -167,14 +171,17 @@ class GarageStateService : public StatefulService<GarageState>
     void registerConfig();
     void onConfigUpdate();
     void updateEndstops();
-
-
     void getDevice(JsonObject& dev);
     void registerRelay();
     void registerStatus();
     void registerEndstopOpen();
     void registerEndstopClosed();
     void registerBarrier();
+    void registerConsolidatedTopic();
+
+    // Consolidated MQTT payload readers
+    static void consolidatedRead(GarageState& state, JsonObject& root);
+    static StateUpdateResult consolidatedUpdate(JsonObject& root, GarageState& state);
 };
 
 #endif

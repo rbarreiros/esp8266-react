@@ -33,8 +33,20 @@ MqttSettingsService::MqttSettingsService(AsyncWebServer* server, FS* fs, Securit
     _reconfigureMqtt{false},
     _disconnectedAt{0},
     _disconnectReason{espMqttClientTypes::DisconnectReason::TCP_DISCONNECTED},
-    _mqttClient{} 
+    _mqttClient{}
 {
+  // WiFi event handlers moved to begin() to avoid static initialization issues
+  _mqttClient.onConnect(std::bind(&MqttSettingsService::onMqttConnect, this, std::placeholders::_1));
+  _mqttClient.onDisconnect(std::bind(&MqttSettingsService::onMqttDisconnect, this, std::placeholders::_1));
+  addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
+}
+
+MqttSettingsService::~MqttSettingsService() 
+{}
+
+void MqttSettingsService::begin() 
+{
+  // WiFi event handlers moved here from constructor to avoid static initialization issues
 #ifdef ESP32
   WiFi.onEvent(
       std::bind(&MqttSettingsService::onStationModeDisconnected, this, std::placeholders::_1, std::placeholders::_2),
@@ -52,16 +64,7 @@ MqttSettingsService::MqttSettingsService(AsyncWebServer* server, FS* fs, Securit
   );
 
 #endif
-  _mqttClient.onConnect(std::bind(&MqttSettingsService::onMqttConnect, this, std::placeholders::_1));
-  _mqttClient.onDisconnect(std::bind(&MqttSettingsService::onMqttDisconnect, this, std::placeholders::_1));
-  addUpdateHandler([&](const String& originId) { onConfigUpdated(); }, false);
-}
 
-MqttSettingsService::~MqttSettingsService() 
-{}
-
-void MqttSettingsService::begin() 
-{
   _fsPersistence.readFromFS();
 }
 

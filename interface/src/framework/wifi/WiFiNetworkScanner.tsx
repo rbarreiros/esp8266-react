@@ -8,11 +8,12 @@ import * as WiFiApi from "../../api/wifi";
 import { WiFiNetwork, WiFiNetworkList } from '../../types';
 import { ButtonRow, FormLoader, SectionContent } from '../../components';
 import { extractErrorMessage } from '../../utils';
+import { useWs } from '../../utils/useWs';
+import { WS_BASE_URL } from '../../api/endpoints';
 
 import WiFiNetworkSelector from './WiFiNetworkSelector';
 
-const NUM_POLLS = 10;
-const POLLING_FREQUENCY = 500;
+const WIFI_SCAN_WEBSOCKET_URL = WS_BASE_URL + "wifiScan";
 
 const compareNetworks = (network1: WiFiNetwork, network2: WiFiNetwork) => {
   if (network1.rssi < network2.rssi)
@@ -22,81 +23,104 @@ const compareNetworks = (network1: WiFiNetwork, network2: WiFiNetwork) => {
   return 0;
 };
 
+interface WiFiScanStatus {
+  scanning: boolean;
+  scanComplete: boolean;
+  networks?: WiFiNetworkList;
+  error?: string;
+}
+
 const WiFiNetworkScanner: FC = () => {
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const pollCount = useRef(0);
   const [networkList, setNetworkList] = useState<WiFiNetworkList>();
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [scanning, setScanning] = useState<boolean>(false);
+
+  // Use WebSocket for real-time scan notifications
+  const { connected: wsConnected, data: wsData } = useWs<WiFiScanStatus>(WIFI_SCAN_WEBSOCKET_URL);
 
   const finishedWithError = useCallback((message: string) => {
     enqueueSnackbar(message, { variant: 'error' });
     setNetworkList(undefined);
     setErrorMessage(message);
+    setScanning(false);
   }, [enqueueSnackbar]);
 
-  const pollNetworkList = useCallback(async () => {
-    try {
-      const response = await WiFiApi.listNetworks();
-      if (response.status === 202) {
-        const completedPollCount = pollCount.current + 1;
-        if (completedPollCount < NUM_POLLS) {
-          pollCount.current = completedPollCount;
-          setTimeout(pollNetworkList, POLLING_FREQUENCY);
-        } else {
-          finishedWithError("Device did not return network list in timely manner");
-        }
-      } else {
-        const newNetworkList = response.data;
-        newNetworkList.networks.sort(compareNetworks);
-        setNetworkList(newNetworkList);
-      }
-    } catch (error: any) {
-      finishedWithError(extractErrorMessage(error, 'Problem listing WiFi networks'));
-    }
-  }, [finishedWithError]);
-
-  const startNetworkScan = useCallback(async () => {
-    pollCount.current = 0;
-    setNetworkList(undefined);
+  const startScan = useCallback(async () => {
+    setScanning(true);
     setErrorMessage(undefined);
+    setNetworkList(undefined);
+    
     try {
+      // Start the scan
       await WiFiApi.scanNetworks();
-      setTimeout(pollNetworkList, POLLING_FREQUENCY);
+      
+      // Real-time notifications will be handled by WebSocket
+      enqueueSnackbar('Network scan started...', { variant: 'info' });
     } catch (error: any) {
-      finishedWithError(extractErrorMessage(error, 'Problem scanning for WiFi networks'));
+      const message = extractErrorMessage(error, 'Failed to start network scan');
+      finishedWithError(message);
     }
-  }, [finishedWithError, pollNetworkList]);
+  }, [enqueueSnackbar, finishedWithError]);
 
-  useEffect(() => { startNetworkScan(); }, [startNetworkScan]);
+  // Handle real-time scan status updates
+  useEffect(() => {
+    if (!wsData) return;
+
+    if (wsData.error) {
+      finishedWithError(wsData.error);
+    } else if (wsData.scanComplete && wsData.networks) {
+      const sortedNetworks = wsData.networks.networks.sort(compareNetworks);
+      setNetworkList({ networks: sortedNetworks });
+      setScanning(false);
+      setErrorMessage(undefined);
+      enqueueSnackbar(`Found ${sortedNetworks.length} networks`, { variant: 'success' });
+    } else if (wsData.scanning) {
+      setScanning(true);
+    }
+  }, [wsData, finishedWithError, enqueueSnackbar]);
+
+  const scanNetworks = () => {
+    setScanning(true);
+    setErrorMessage(undefined);
+    setNetworkList(undefined);
+    startScan();
+  };
 
   const renderNetworkScanner = () => {
     if (!networkList) {
-      return (<FormLoader message="Scanning&hellip;" errorMessage={errorMessage} />);
+      return (
+        <SectionContent title="Network Scanner" titleGutter>
+          <FormLoader
+            message={scanning ? "Scanning networks..." : "Ready to scan"}
+            errorMessage={errorMessage}
+            onRetry={scanNetworks}
+          />
+          <ButtonRow>
+            <Button
+              startIcon={<PermScanWifiIcon />}
+              variant="outlined"
+              color="secondary"
+              onClick={scanNetworks}
+              disabled={scanning || !wsConnected}
+            >
+              {scanning ? 'Scanning...' : 'Scan Networks'}
+            </Button>
+          </ButtonRow>
+        </SectionContent>
+      );
     }
+
     return (
-      <WiFiNetworkSelector networkList={networkList} />
+      <WiFiNetworkSelector
+        networkList={networkList}
+      />
     );
   };
 
-  return (
-    <SectionContent title="Network Scanner">
-      {renderNetworkScanner()}
-      <ButtonRow pt={1}>
-        <Button
-          startIcon={<PermScanWifiIcon />}
-          variant="contained"
-          color="secondary"
-          onClick={startNetworkScan}
-          disabled={!errorMessage && !networkList}
-        >
-          Scan again&hellip;
-        </Button>
-      </ButtonRow>
-    </SectionContent>
-  );
-
+  return renderNetworkScanner();
 };
 
 export default WiFiNetworkScanner;
