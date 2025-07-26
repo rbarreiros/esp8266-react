@@ -47,7 +47,11 @@ void APSettingsService::loop()
     _lastManaged = currentMillis;
     manageAP();
   }
-  handleDNS();
+  
+  // Only handle DNS when AP is actually active
+  if (_dnsServer) {
+    handleDNS();
+  }
 }
 
 void APSettingsService::manageAP() 

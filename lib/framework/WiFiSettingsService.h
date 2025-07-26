@@ -22,7 +22,7 @@
 #define WIFI_SETTINGS_FILE "/config/wifiSettings.json"
 #define WIFI_SETTINGS_SERVICE_PATH "/rest/wifiSettings"
 
-#define WIFI_RECONNECTION_DELAY 1000 * 30
+#define WIFI_RECONNECTION_DELAY 1000 * 5
 
 class WiFiSettings 
 {
