@@ -32,9 +32,8 @@ void RfControllerTask(void* param)
     for(;;)
     {
         rf->loop();
-        // Small delay to prevent watchdog issues and allow other tasks
-        // Using a longer delay for RF since it doesn't need to be as frequent
-        vTaskDelay(pdMS_TO_TICKS(10));
+        // Reduced delay due to optimizations
+        vTaskDelay(pdMS_TO_TICKS(2));
     }
 }
 
@@ -191,14 +190,15 @@ void setup()
 
 void loop()
 {
+    static unsigned long lastMemoryPrint = 0;
     static unsigned long loopCount = 0;
     loopCount++;
     
-    // Feed the watchdog every 1000 loops
-    if (loopCount % 1000 == 0) {
-        Serial.printf("Main loop iteration: %lu\n", loopCount);
-        // Blink LED to show system is running
-        digitalWrite(2, !digitalRead(2));
+    // Print memory usage every 10 seconds
+    if (millis() - lastMemoryPrint >= 10000) {
+        Serial.printf("Memory: %d free / %d max alloc | Loop: %lu\n", 
+                     ESP.getFreeHeap(), ESP.getMaxAllocHeap(), loopCount);
+        lastMemoryPrint = millis();
     }
     
     // RF controller now runs in its own task on Core 0

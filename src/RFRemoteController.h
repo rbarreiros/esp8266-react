@@ -15,6 +15,10 @@
 // to start validation. Should also check counter
 #define MIN_PACKETS_ACCEPTED 3 
 
+// Optimization constants
+#define NICE_FLOR_S_TABLE_SIZE 32750  // Half of 65500 entries
+#define TABLE_INDEX_CACHE_SIZE 8       // Small cache for recent lookups
+
 /**
  * We're using Nice FLOR-S remotes, only because I saw them in aliexpress and they were
  * pretty and small (Remotes are Nice INTI2, which apparently use a modified Nice FLOR-S)
@@ -118,10 +122,22 @@ private:
     uint8_t     m_lastHashCount;
     std::vector<RfRemoteControllerCallback>  m_cb;
     
+    // Simple cache for table index lookups
+    struct TableIndexCache {
+        uint16_t code;
+        uint16_t index;
+    };
+    TableIndexCache m_cache[TABLE_INDEX_CACHE_SIZE];
+    uint8_t m_cacheIndex;
+    
     RemotePacket getPacket(const BitVector *recorded);
     void processAllCallbacks(RemotePacket packet, RemoteSerial serial);
 
-    static uint16_t getTableIndex(const uint16_t code);
+    uint16_t getTableIndex(const uint16_t code);
+    static uint16_t getTableIndexOptimized(const uint16_t code);
+    
+    // Static wrapper for backward compatibility
+    static uint16_t getTableIndexStatic(const uint16_t code);
 };
 
 #endif

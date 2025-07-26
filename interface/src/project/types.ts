@@ -10,6 +10,7 @@ export interface GarageState {
   relay_on: boolean;
   endstop_closed: boolean;
   endstop_open: boolean;
+  barrier_triggered: boolean;
   status: GarageStatus;
 }
 

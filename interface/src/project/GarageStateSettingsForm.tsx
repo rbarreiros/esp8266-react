@@ -45,6 +45,13 @@ export const endstopOpenStatus = ({ endstop_open }: GarageState) => {
     return "Open endstop open";
 };
 
+export const barrierTriggeredStatus = ({ barrier_triggered }: GarageState) => {
+  if(barrier_triggered)
+    return "Barrier triggered";
+  else
+    return "Barrier not triggered";
+};
+
 export const endstopClosedStatusHighlight = ({ endstop_closed }: GarageState, theme: Theme) => {
   if (endstop_closed)
     return theme.palette.success.main;
@@ -58,6 +65,14 @@ export const endstopOpenStatusHighlight = ({ endstop_open }: GarageState, theme:
   else
     return theme.palette.info.main;
 };
+
+export const barrierTriggeredStatusHighlight = ({ barrier_triggered }: GarageState, theme: Theme) => {
+  if (barrier_triggered)
+    return theme.palette.success.main;
+  else
+    return theme.palette.info.main;
+};
+
 
 const garageStatusHighlight = ({ status }: GarageState, theme: Theme) => {
   switch (status) {
@@ -136,6 +151,14 @@ const GarageStateSettingsForm: FC = () => {
               </Avatar>
             </ListItemAvatar>
             <ListItemText primary="Status" secondary={endstopOpenStatus(wsData)} />
+          </ListItem>
+          <ListItem>
+            <ListItemAvatar>
+              <Avatar sx={{ bgcolor: barrierTriggeredStatusHighlight(wsData, theme) }}>
+                <DoNotDisturbOnIcon />
+              </Avatar>
+            </ListItemAvatar>
+            <ListItemText primary="Status" secondary={barrierTriggeredStatus(wsData)} />
           </ListItem>
         </List>
         </SectionContent>

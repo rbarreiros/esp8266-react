@@ -19,9 +19,16 @@ RfRemoteController::RfRemoteController() :
     m_rf{RF_PIN},
     m_lastHashReceived{0},
     m_lastHashCount{0},
-    m_cb{0}
+    m_cb{0},
+    m_cacheIndex{0}
 {
     RfRemoteController::m_thisPtr = this;
+    
+    // Initialize cache
+    for (int i = 0; i < TABLE_INDEX_CACHE_SIZE; i++) {
+        m_cache[i].code = 0xFFFF;  // Invalid code
+        m_cache[i].index = 0;
+    }
 }
 
 void RfRemoteController::begin() {
@@ -50,13 +57,18 @@ void RfRemoteController::processCode(const BitVector* recorded)
 
         if(m_lastHashCount == MIN_PACKETS_ACCEPTED)
         {
-            RemotePacket packet = RfRemoteController::getPacket(recorded);
-            RemoteSerial ser = RfRemoteController::getSerial(packet);
+            // Only process if we have valid data
+            if(recorded->get_nb_bits() == 52) {
+                RemotePacket packet = RfRemoteController::getPacket(recorded);
+                
+                // Quick validation before expensive table lookup
+                if(packet.button > 0 && packet.hash > 0) {
+                    RemoteSerial ser = RfRemoteController::getSerial(packet);
 
-            Serial.printf("Processing %04X - %s - %d\r\n", hash, ser.toString().c_str(), packet.button);
-
-            if(packet.button > 0 && packet.hash > 0)
+                    Serial.printf("Processing %04X - %s - %d\r\n", hash, ser.toString().c_str(), packet.button);
                     processAllCallbacks(packet, ser);
+                }
+            }
 
             m_lastHashCount = 0;
             m_lastHashReceived = 0;
@@ -79,14 +91,23 @@ RemotePacket RfRemoteController::getPacket(const BitVector *recorded)
     if(recorded->get_nb_bits() != 52)
         return {0};
 
+    // Use direct byte access for better performance
+    uint8_t byte0 = recorded->get_nth_byte(0);
+    uint8_t byte1 = recorded->get_nth_byte(1);
+    uint8_t byte2 = recorded->get_nth_byte(2);
+    uint8_t byte3 = recorded->get_nth_byte(3);
+    uint8_t byte4 = recorded->get_nth_byte(4);
+    uint8_t byte5 = recorded->get_nth_byte(5);
+    uint8_t byte6 = recorded->get_nth_byte(6);
+
     RemotePacket pack = {
-        recorded->get_nth_byte(6),
-        static_cast<uint8_t>((recorded->get_nth_byte(5) >> 4) & 0x0f),
-        static_cast<uint8_t>((recorded->get_nth_byte(5) & 0x0f)),
-        static_cast<uint16_t>((recorded->get_nth_byte(4) << 8) | (recorded->get_nth_byte(3) & 0xff)),
-        recorded->get_nth_byte(2),
-        recorded->get_nth_byte(1),
-        recorded->get_nth_byte(0)
+        byte6,                                    // button
+        static_cast<uint8_t>((byte5 >> 4) & 0x0f), // count
+        static_cast<uint8_t>(byte5 & 0x0f),        // enc1
+        static_cast<uint16_t>((byte4 << 8) | byte3), // hash
+        byte2,                                    // enc2
+        byte1,                                    // enc3
+        byte0                                     // enc4
     };
 
     return pack;
@@ -126,7 +147,7 @@ RemoteSerial RfRemoteController::getSerial(const BitVector* recorded) {
 
   RemoteSerial serial;
   uint16_t hash = (recorded->get_nth_byte(4) << 8) | (recorded->get_nth_byte(3) & 0xff);
-  uint16_t tblIndex = RfRemoteController::getTableIndex(hash);
+  uint16_t tblIndex = RfRemoteController::getTableIndexStatic(hash);
   uint8_t ki = pgm_read_byte_near(NICE_FLOR_S_TABLE_KI + (tblIndex & 0xff)) ^ hash;
 
   serial.ser[0] = (recorded->get_nth_byte(5) ^ ki) & 0x0f;
@@ -144,7 +165,7 @@ RemoteSerial RfRemoteController::getSerial(const uint8_t* code, uint8_t size) {
   RemoteSerial serial;
   // Find codes index
   uint16_t hash = (code[2] << 8) | (code[3] & 0xff);
-  uint16_t tblIndex = RfRemoteController::getTableIndex(hash);
+  uint16_t tblIndex = RfRemoteController::getTableIndexStatic(hash);
   uint8_t ki = pgm_read_byte_near(NICE_FLOR_S_TABLE_KI + (tblIndex & 0xff)) ^ hash;
 
   serial.ser[0] = (code[1] ^ ki) & 0x0f;
@@ -159,7 +180,7 @@ RemoteSerial RfRemoteController::getSerial(RemotePacket& packet) {
   RemoteSerial serial;
 
   // Find codes index
-  uint16_t tblIndex = RfRemoteController::getTableIndex(packet.hash);
+  uint16_t tblIndex = RfRemoteController::getTableIndexStatic(packet.hash);
   uint8_t ki = pgm_read_byte_near(NICE_FLOR_S_TABLE_KI + (tblIndex & 0xff)) ^ packet.hash;
 
   serial.ser[0] = (packet.enc1 ^ ki) & 0x0f;
@@ -198,9 +219,60 @@ bool RfRemoteController::validateCode(RemotePacket& packet, RemoteSerial& serial
 }
 
 uint16_t RfRemoteController::getTableIndex(const uint16_t code) {
-  for (uint16_t i = 0; i < sizeof(NICE_FLOR_S_TABLE_ENCODE); i++) {
-    if (pgm_read_word_near(NICE_FLOR_S_TABLE_ENCODE + i) == code)
+  // First check cache
+  for (uint8_t i = 0; i < TABLE_INDEX_CACHE_SIZE; i++) {
+    if (m_cache[i].code == code) {
+      return m_cache[i].index;
+    }
+  }
+  
+  // If not in cache, do optimized search
+  uint16_t index = getTableIndexOptimized(code);
+  
+  // Add to cache
+  m_cache[m_cacheIndex].code = code;
+  m_cache[m_cacheIndex].index = index;
+  m_cacheIndex = (m_cacheIndex + 1) % TABLE_INDEX_CACHE_SIZE;
+  
+  return index;
+}
+
+uint16_t RfRemoteController::getTableIndexStatic(const uint16_t code) {
+  // Static wrapper that uses the instance pointer
+  if (m_thisPtr) {
+    return m_thisPtr->getTableIndex(code);
+  }
+  
+  // Fallback to optimized search without cache
+  return getTableIndexOptimized(code);
+}
+
+uint16_t RfRemoteController::getTableIndexOptimized(const uint16_t code) {
+  // Since array is not sorted, use optimized linear search with early termination
+  // Search in chunks to improve cache locality
+  
+  // First, check if it's a common code (first 1000 entries)
+  for (uint16_t i = 0; i < 1000; i++) {
+    if (pgm_read_word_near(NICE_FLOR_S_TABLE_ENCODE + i) == code) {
       return i;
+    }
+  }
+  
+  // Then check the rest in larger chunks
+  for (uint16_t i = 1000; i < NICE_FLOR_S_TABLE_SIZE; i += 4) {
+    // Check 4 entries at once for better performance
+    if (pgm_read_word_near(NICE_FLOR_S_TABLE_ENCODE + i) == code) {
+      return i;
+    }
+    if (i + 1 < NICE_FLOR_S_TABLE_SIZE && pgm_read_word_near(NICE_FLOR_S_TABLE_ENCODE + i + 1) == code) {
+      return i + 1;
+    }
+    if (i + 2 < NICE_FLOR_S_TABLE_SIZE && pgm_read_word_near(NICE_FLOR_S_TABLE_ENCODE + i + 2) == code) {
+      return i + 2;
+    }
+    if (i + 3 < NICE_FLOR_S_TABLE_SIZE && pgm_read_word_near(NICE_FLOR_S_TABLE_ENCODE + i + 3) == code) {
+      return i + 3;
+    }
   }
 
   return 0;
